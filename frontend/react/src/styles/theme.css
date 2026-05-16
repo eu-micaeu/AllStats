@@ -10,6 +10,9 @@
   --valorant-color: #ef4444;
   
   --live-color: #22c55e;
+
+  --font-main: 'Inter', sans-serif;
+  --font-display: 'Montserrat', sans-serif;
 }
 
 * {
@@ -21,8 +24,12 @@
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-main);
   line-height: 1.5;
+}
+
+h1, h2, h3, h4, .logo-text, .nav-link, .nav-link-btn, .auth-btn, .game-label, .section-title {
+  font-family: var(--font-display);
 }
 
 /* Header Styles */

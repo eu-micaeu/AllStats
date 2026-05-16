@@ -32,6 +32,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
           fetchSeriesMatches(seriesId),
           fetchSeriesInfo(seriesId)
         ]);
+        console.log('SeriesDetail: infoData:', infoData);
         setTeams(teamsData);
         setMatches(matchesData);
         setSeriesInfo(infoData);
@@ -43,12 +44,23 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
             const nameLower = t.name.toLowerCase();
             const isElimination = nameLower.includes('playoff') || nameLower.includes('play-in');
             
-            if (isElimination) {
-              dataMap[t.id] = { type: 'bracket', data: await fetchTournamentBrackets(t.id) };
-            } else {
-              dataMap[t.id] = { type: 'standings', data: await fetchTournamentStandings(t.id) };
+            try {
+              if (isElimination) {
+                console.log('SeriesDetail: Fetching bracket for tournament:', t.id);
+                const bracketData = await fetchTournamentBrackets(t.id);
+                console.log('SeriesDetail: Bracket data for', t.id, bracketData);
+                dataMap[t.id] = { type: 'bracket', data: bracketData };
+              } else {
+                console.log('SeriesDetail: Fetching standings for tournament:', t.id);
+                const standingsData = await fetchTournamentStandings(t.id);
+                console.log('SeriesDetail: Standings data for', t.id, standingsData);
+                dataMap[t.id] = { type: 'standings', data: standingsData };
+              }
+            } catch (err) {
+              console.error(`SeriesDetail: Error fetching data for tournament ${t.id}:`, err);
             }
           }));
+          console.log('SeriesDetail: dataMap:', dataMap);
           setTournamentData(dataMap);
         }
         
@@ -203,13 +215,37 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
 
                   const getDisplayName = (t: any) => t?.acronym || (t?.name ? (t.name.length > 8 ? t.name.substring(0, 5) + '..' : t.name) : 'TBD');
 
+                  const isLive = m.status === 'live';
+
                   return (
                     <div key={m.id} style={{ 
                       background: 'var(--card-bg)', 
-                      border: '1px solid rgba(255,255,255,0.05)', 
+                      border: isLive ? '1px solid var(--live-color)' : '1px solid rgba(255,255,255,0.05)', 
                       borderRadius: '4px',
                       overflow: 'hidden',
+                      boxShadow: isLive ? '0 0 10px rgba(34, 197, 94, 0.2)' : 'none',
+                      position: 'relative'
                     }}>
+                      {isLive && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '0',
+                          right: '0',
+                          background: 'var(--live-color)',
+                          color: 'white',
+                          fontSize: '0.45rem',
+                          fontWeight: 900,
+                          padding: '0.1rem 0.3rem',
+                          borderBottomLeftRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                          zIndex: 2
+                        }}>
+                          <div className="pulse" style={{ width: '4px', height: '4px', background: 'white' }} />
+                          LIVE
+                        </div>
+                      )}
                       <div style={{ 
                         display: 'flex', 
                         justifyContent: 'space-between', 
@@ -309,10 +345,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                         <div style={{ flex: 1, textAlign: 'right', fontWeight: 700 }}>{m.teamA.name}</div>
                         <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontWeight: 900, minWidth: '50px', textAlign: 'center' }}>
                           {m.status === 'live' ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                              <span style={{ fontSize: '0.75rem' }}>{m.teamA.score} - {m.teamB.score}</span>
-                              <span style={{ fontSize: '0.5rem', opacity: 0.8, color: 'var(--live-color)' }}>({m.currentMapScoreA}-{m.currentMapScoreB})</span>
-                            </div>
+                            <span style={{ fontSize: '0.75rem' }}>{m.teamA.score} - {m.teamB.score}</span>
                           ) : m.status === 'upcoming' ? 'VS' : `${m.teamA.score} - ${m.teamB.score}`}
                         </div>
                         <div style={{ flex: 1, textAlign: 'left', fontWeight: 700 }}>{m.teamB.name}</div>

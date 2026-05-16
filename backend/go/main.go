@@ -133,7 +133,7 @@ func main() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"standings": standings})
+		c.JSON(http.StatusOK, standings)
 	})
 
 	r.GET("/api/tournaments/:id/brackets", func(c *gin.Context) {

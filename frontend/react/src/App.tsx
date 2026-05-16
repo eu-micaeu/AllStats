@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, Swords, Newspaper, Trophy, ChevronRight } from 'lucide-react';
 import type { Match, GameType } from './types/match';
 import type { User } from './types/user';
-import { fetchMatches, fetchFavoriteMatches } from './services/api';
+import { fetchMatches, fetchFavoriteMatches, fetchTournaments } from './services/api';
 import { wsService } from './services/websocket';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -18,6 +18,7 @@ import './styles/theme.css';
 function App() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [favoriteMatches, setFavoriteMatches] = useState<Match[]>([]);
+  const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -34,23 +35,24 @@ function App() {
         const parsed = JSON.parse(storedUser);
         console.log('App: Stored user found:', parsed);
         setUser(parsed);
-        // MongoDB ID might be in 'id' or '_id'
-        uid = parsed.id || parsed._id || '';
+        uid = parsed.id || (parsed as any)._id || '';
       } catch (e) {
         localStorage.removeItem('user');
       }
     }
 
     const loadInitialData = async () => {
-      console.log('App: Fetching data for UID:', uid);
+      console.log('App: Loading data for UID:', uid);
       try {
-        const [initialMatches, favMatches] = await Promise.all([
+        const [initialMatches, favMatches, initialTournaments] = await Promise.all([
           fetchMatches(),
-          uid ? fetchFavoriteMatches(uid) : Promise.resolve([])
+          uid ? fetchFavoriteMatches(uid) : Promise.resolve([]),
+          fetchTournaments()
         ]);
-        console.log('App: Matches fetched:', initialMatches.length, 'Favorites:', favMatches.length);
+        console.log('App: Data fetched successfully');
         setMatches(initialMatches);
         setFavoriteMatches(favMatches);
+        setTournaments(initialTournaments);
         setLoading(false);
       } catch (err) {
         console.error('App: Initialization error:', err);
@@ -83,14 +85,12 @@ function App() {
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
-    console.log('App: User updated, new favorites:', updatedUser.favoriteTeams?.length);
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
     const uid = updatedUser.id || (updatedUser as any)._id;
     if (uid) {
       try {
         const favMatches = await fetchFavoriteMatches(uid);
-        console.log('App: Refreshed favorite matches:', favMatches.length);
         setFavoriteMatches(favMatches);
       } catch (err) {
         console.error('App: Refresh favorites error:', err);
@@ -136,13 +136,9 @@ function App() {
           color: m.status === 'live' ? 'var(--live-color)' : 'inherit'
         }}>
           {m.status === 'live' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-              <span style={{ fontSize: '0.75rem' }}>{m.teamA.score} - {m.teamB.score}</span>
-              <span style={{ fontSize: '0.55rem', opacity: 0.8 }}>({m.currentMapScoreA}-{m.currentMapScoreB})</span>
-            </div>
+            <span style={{ fontSize: '0.75rem' }}>{m.teamA.score} - {m.teamB.score}</span>
           ) : m.status === 'upcoming' ? 'VS' : `${m.teamA.score} - ${m.teamB.score}`}
         </div>
-        
         <div style={{ flex: 1, textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {m.teamB.name}
         </div>
@@ -152,6 +148,7 @@ function App() {
         {m.stage || ''}
       </div>
 
+      {/* Hover Tooltip */}
       <div className="match-tooltip">
         <div className="tooltip-header">{m.game} • {m.stage || 'Official Match'}</div>
         <div className="tooltip-content">
@@ -164,24 +161,13 @@ function App() {
               <div style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.1em', lineHeight: 1 }}>
                 {m.teamA.score} - {m.teamB.score}
               </div>
-              {m.status === 'live' && (
-                <div style={{ 
-                  fontSize: '0.9rem', 
-                  fontWeight: 800, 
-                  color: 'var(--live-color)',
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  padding: '0.1rem 0.5rem',
-                  borderRadius: '4px'
-                }}>
-                  {m.currentMapScoreA} : {m.currentMapScoreB}
-                </div>
-              )}
               {m.numberOfGames > 0 && (
                 <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800, marginTop: '0.2rem' }}>
                   Best of {m.numberOfGames}
                 </div>
               )}
             </div>
+
             <div className="tooltip-team">
               {m.teamB.logo ? <img src={m.teamB.logo} alt="" className="tooltip-logo" /> : <div className="tooltip-logo" style={{fontSize: '1.5rem'}}>🛡️</div>}
               <span className="tooltip-team-name">{m.teamB.name}</span>
@@ -206,7 +192,6 @@ function App() {
   const renderFavoriteMatches = () => {
     if (!user || favoriteMatches.length === 0) return null;
 
-    // Show all matches returned from favorite-matches endpoint (already filtered in backend)
     const sortedFavs = [...favoriteMatches].sort((a, b) => {
       if (a.status === 'live' && b.status !== 'live') return -1;
       if (a.status !== 'live' && b.status === 'live') return 1;
@@ -214,12 +199,12 @@ function App() {
     });
 
     return (
-      <section style={{ marginBottom: '3rem' }}>
+      <section style={{ marginBottom: '4rem' }}>
         <h2 style={{ 
-          fontSize: '1.2rem', 
-          marginBottom: '1.25rem', 
-          borderLeft: '4px solid var(--valorant-color)', 
-          paddingLeft: '1rem',
+          fontSize: '1rem', 
+          fontWeight: 800, 
+          marginBottom: '1.5rem', 
+          color: 'var(--text-primary)',
           textTransform: 'uppercase',
           display: 'flex',
           alignItems: 'center',
@@ -240,6 +225,9 @@ function App() {
 
   const renderGameSection = (game: GameType) => {
     const gameMatches = matches.filter(m => m.game === game);
+    const gameLeagues = tournaments.filter(t => t.game === game).slice(0, 5);
+    
+    // Sort to prioritize LIVE matches
     const sortedMatches = [...gameMatches].sort((a, b) => {
       if (a.status === 'live' && b.status !== 'live') return -1;
       if (a.status !== 'live' && b.status === 'live') return 1;
@@ -249,25 +237,92 @@ function App() {
     const displayMatches = sortedMatches.slice(0, 5);
     if (selectedGame !== game) return null;
     
-    if (gameMatches.length === 0) {
-      return (
-        <section key={game} style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', borderLeft: `4px solid ${getGameColor(game)}`, paddingLeft: '1rem', textTransform: 'uppercase' }}>{game}</h2>
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No {game} matches found.</div>
-        </section>
-      );
-    }
-
     return (
-      <section key={game} style={{ marginBottom: '3rem' }}>
-        <h2 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', borderLeft: `4px solid ${getGameColor(game)}`, paddingLeft: '1rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>{game}</span>
-          <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1.5rem' }}></span>
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          {displayMatches.map((m) => renderMatchRow(m))}
-        </div>
-      </section>
+      <div key={game} className="game-view-container">
+        {/* Section: Partidas */}
+        <section style={{ marginBottom: '4rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Swords size={18} color={getGameColor(game)} /> 
+            PARTIDAS
+            <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
+          </h2>
+          {gameMatches.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {displayMatches.map((m) => renderMatchRow(m))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No matches found.</div>
+          )}
+        </section>
+
+        {/* Section: Noticias */}
+        <section style={{ marginBottom: '4rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Newspaper size={18} color={getGameColor(game)} /> 
+            NOTÍCIAS
+            <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '8px', padding: '1rem' }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-color)', marginBottom: '0.5rem' }}>BREAKING</div>
+              <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>New patch updates balance the current {game} meta.</p>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>2 hours ago</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '8px', padding: '1rem' }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--valorant-color)', marginBottom: '0.5rem' }}>TRANSFER</div>
+              <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>Major roster changes announced ahead of next season.</p>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>5 hours ago</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '8px', padding: '1rem' }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--live-color)', marginBottom: '0.5rem' }}>TOURNAMENT</div>
+              <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>Prize pool increased for upcoming world championship.</p>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>1 day ago</div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section: Torneios */}
+        <section style={{ marginBottom: '4rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Trophy size={18} color={getGameColor(game)} /> 
+            TORNEIOS
+            <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
+          </h2>
+          {tournaments.filter(t => t.game === game).length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              {[...tournaments.filter(t => t.game === game)]
+                .sort((a, b) => {
+                  if (a.status === 'live' && b.status !== 'live') return -1;
+                  if (a.status !== 'live' && b.status === 'live') return 1;
+                  return 0;
+                })
+                .slice(0, 5)
+                .map(league => (
+                  <div key={league.id} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    background: league.status === 'live' ? 'rgba(34, 197, 94, 0.05)' : 'rgba(255,255,255,0.01)',
+                    border: league.status === 'live' ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid rgba(255,255,255,0.02)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }} onClick={() => navigate(`/tournaments/${league.id}`)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{league.name}</span>
+                      {league.status === 'live' && (
+                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--live-color)', background: 'rgba(34, 197, 94, 0.1)', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>LIVE</span>
+                      )}
+                    </div>
+                    <ChevronRight size={14} color="var(--text-secondary)" />
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No active tournaments found.</div>
+          )}
+        </section>
+      </div>
     );
   };
 
@@ -279,7 +334,7 @@ function App() {
     return 'matches';
   };
 
-  if (loading) return <div className="container">Loading matches...</div>;
+  if (loading) return <div className="container">Loading dashboard...</div>;
   if (error) return <div className="container" style={{color: 'var(--valorant-color)'}}>{error}</div>;
 
   return (

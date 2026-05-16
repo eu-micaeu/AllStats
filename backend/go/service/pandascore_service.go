@@ -40,12 +40,14 @@ func (s *PandaScoreService) GetTournaments() []models.Tournament {
 
 func (s *PandaScoreService) GetLeagueDetails(id string) (interface{}, error) {
 	url := fmt.Sprintf("https://api.pandascore.co/leagues/%s", id)
-	return s.getJson(url)
+	data, _, err := s.getJson(url)
+	return data, err
 }
 
 func (s *PandaScoreService) GetSeriesInfo(id string) (interface{}, error) {
 	url := fmt.Sprintf("https://api.pandascore.co/series/%s", id)
-	return s.getJson(url)
+	data, _, err := s.getJson(url)
+	return data, err
 }
 
 func (s *PandaScoreService) GetSeriesTeams(id string) ([]models.TeamDetail, error) {
@@ -156,12 +158,10 @@ func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) 
 		Games    []struct {
 			Status string `json:"status"`
 			Position int `json:"position"`
-			Teams []struct {
-				Team struct {
-					ID int `json:"id"`
-				} `json:"team"`
-				Score int `json:"score"`
-			} `json:"teams"`
+			Results []struct {
+				TeamID int `json:"team_id"`
+				Score  int `json:"score"`
+			} `json:"results"`
 		} `json:"games"`
 		Videogame struct {
 			Slug string `json:"slug"`
@@ -241,11 +241,11 @@ func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) 
 		if currentGame > 0 {
 			for _, g := range pm.Games {
 				if g.Position == currentGame {
-					for _, ts := range g.Teams {
-						if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
-							match.CurrentMapScoreA = ts.Score
-						} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
-							match.CurrentMapScoreB = ts.Score
+					for _, res := range g.Results {
+						if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", res.TeamID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
+							match.CurrentMapScoreA = res.Score
+						} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", res.TeamID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
+							match.CurrentMapScoreB = res.Score
 						}
 					}
 					break
@@ -289,12 +289,20 @@ func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) 
 
 func (s *PandaScoreService) GetTournamentStandings(id string) (interface{}, error) {
 	url := fmt.Sprintf("https://api.pandascore.co/tournaments/%s/standings", id)
-	return s.getJson(url)
+	data, code, err := s.getJson(url)
+	if code == http.StatusNotFound {
+		return []interface{}{}, nil
+	}
+	return data, err
 }
 
 func (s *PandaScoreService) GetTournamentBrackets(id string) (interface{}, error) {
 	url := fmt.Sprintf("https://api.pandascore.co/tournaments/%s/brackets", id)
-	return s.getJson(url)
+	data, code, err := s.getJson(url)
+	if code == http.StatusNotFound {
+		return []interface{}{}, nil
+	}
+	return data, err
 }
 
 func (s *PandaScoreService) SearchTeams(query string) ([]models.TeamSimple, error) {
@@ -310,6 +318,10 @@ func (s *PandaScoreService) SearchTeams(query string) ([]models.TeamSimple, erro
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
 
 	var batch []struct {
 		ID        int    `json:"id"`
@@ -336,7 +348,8 @@ func (s *PandaScoreService) SearchTeams(query string) ([]models.TeamSimple, erro
 	return teams, nil
 }
 
-func (s *PandaScoreService) getJson(url string) (interface{}, error) {
+func (s *PandaScoreService) getJson(url string) (interface{}, int, error) {
+	fmt.Printf("getJson: Fetching %s\n", url)
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+s.token)
@@ -344,15 +357,22 @@ func (s *PandaScoreService) getJson(url string) (interface{}, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		fmt.Printf("getJson error: %v\n", err)
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("getJson: API returned status %d for %s\n", resp.StatusCode, url)
+		return nil, resp.StatusCode, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
 	var data interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
+		fmt.Printf("getJson decode error: %v\n", err)
+		return nil, resp.StatusCode, err
 	}
-	return data, nil
+	return data, resp.StatusCode, nil
 }
 
 func (s *PandaScoreService) GetTeamsMatches(teamIDs []string) ([]models.Match, error) {
@@ -390,12 +410,10 @@ func (s *PandaScoreService) GetTeamsMatches(teamIDs []string) ([]models.Match, e
 		Games    []struct {
 			Status string `json:"status"`
 			Position int `json:"position"`
-			Teams []struct {
-				Team struct {
-					ID int `json:"id"`
-				} `json:"team"`
-				Score int `json:"score"`
-			} `json:"teams"`
+			Results []struct {
+				TeamID int `json:"team_id"`
+				Score  int `json:"score"`
+			} `json:"results"`
 		} `json:"games"`
 		Videogame struct {
 			Slug string `json:"slug"`
@@ -464,11 +482,11 @@ func (s *PandaScoreService) GetTeamsMatches(teamIDs []string) ([]models.Match, e
 		if currentGame > 0 {
 			for _, g := range pm.Games {
 				if g.Position == currentGame {
-					for _, ts := range g.Teams {
-						if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
-							match.CurrentMapScoreA = ts.Score
-						} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
-							match.CurrentMapScoreB = ts.Score
+					for _, res := range g.Results {
+						if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", res.TeamID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
+							match.CurrentMapScoreA = res.Score
+						} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", res.TeamID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
+							match.CurrentMapScoreB = res.Score
 						}
 					}
 				}
@@ -517,6 +535,29 @@ func (s *PandaScoreService) fetchTournaments() {
 	newTournaments := []models.Tournament{}
 	client := &http.Client{}
 
+	// 1. Identify active leagues from running matches
+	activeLeagueIDs := make(map[int]bool)
+	urlMatches := "https://api.pandascore.co/matches?filter[status]=running&videogame=league-of-legends,csgo,valorant&per_page=50"
+	reqM, _ := http.NewRequest("GET", urlMatches, nil)
+	reqM.Header.Set("Authorization", "Bearer "+s.token)
+	reqM.Header.Set("Accept", "application/json")
+	
+	respM, err := client.Do(reqM)
+	if err == nil && respM.StatusCode == http.StatusOK {
+		var liveMatches []struct {
+			League struct {
+				ID int `json:"id"`
+			} `json:"league"`
+		}
+		if err := json.NewDecoder(respM.Body).Decode(&liveMatches); err == nil {
+			for _, m := range liveMatches {
+				activeLeagueIDs[m.League.ID] = true
+			}
+		}
+		respM.Body.Close()
+	}
+
+	// 2. Fetch general leagues (10 pages)
 	for page := 1; page <= 10; page++ {
 		url := fmt.Sprintf("https://api.pandascore.co/leagues?filter[videogame_id]=1,3,26&sort=name&page=%d&per_page=100", page)
 		
@@ -569,11 +610,16 @@ func (s *PandaScoreService) fetchTournaments() {
 				continue
 			}
 
+			status := "running"
+			if activeLeagueIDs[pl.ID] {
+				status = "live"
+			}
+
 			newTournaments = append(newTournaments, models.Tournament{
 				ID:       fmt.Sprintf("%d", pl.ID),
 				Name:     pl.Name,
 				Game:     displayGame,
-				Status:   "running",
+				Status:   status,
 				League:   pl.Name,
 				ImageURL: pl.ImageURL,
 			})
@@ -613,12 +659,10 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 			Games    []struct {
 				Status string `json:"status"`
 				Position int `json:"position"`
-				Teams []struct {
-					Team struct {
-						ID int `json:"id"`
-					} `json:"team"`
-					Score int `json:"score"`
-				} `json:"teams"`
+				Results []struct {
+					TeamID int `json:"team_id"`
+					Score  int `json:"score"`
+				} `json:"results"`
 			} `json:"games"`
 			Videogame struct {
 				Slug string `json:"slug"`
@@ -701,11 +745,11 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 			if currentGame > 0 {
 				for _, g := range pm.Games {
 					if g.Position == currentGame {
-						for _, ts := range g.Teams {
-							if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
-								match.CurrentMapScoreA = ts.Score
-							} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
-								match.CurrentMapScoreB = ts.Score
+						for _, res := range g.Results {
+							if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", res.TeamID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
+								match.CurrentMapScoreA = res.Score
+							} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", res.TeamID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
+								match.CurrentMapScoreB = res.Score
 							}
 						}
 						break
