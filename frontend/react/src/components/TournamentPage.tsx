@@ -46,16 +46,33 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick }) =>
 
   return (
     <div className="tournament-page">
-      <div className="search-container">
-        <Search className="search-icon" style={{ position: 'absolute', left: '1.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-        <input
-          type="text"
-          placeholder="Search tournaments by name, league or game..."
-          className="search-input"
-          style={{ paddingLeft: '3.5rem' }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="search-section">
+        <div className="search-container">
+          <Search className="search-icon" size={20} />
+          <input
+            type="text"
+            placeholder="Search tournaments by name, league or game..."
+            className="search-input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && (
+            <button 
+              className="clear-search" 
+              onClick={() => setSearchTerm('')}
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <div className="search-meta">
+          {searchTerm && (
+            <span className="results-count">
+              Found {filteredTournaments.length} {filteredTournaments.length === 1 ? 'tournament' : 'tournaments'}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="tournament-grid">

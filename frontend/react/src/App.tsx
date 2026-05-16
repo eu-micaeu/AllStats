@@ -253,7 +253,7 @@ function App() {
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Swords size={18} color={getGameColor(game)} /> 
-            PARTIDAS
+            MATCHES
             <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
           </h2>
           {displayMatches.length > 0 ? (
@@ -270,7 +270,7 @@ function App() {
           <section style={{ marginBottom: '4rem' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ fontSize: '1.1rem' }}>🏁</div>
-              ÚLTIMOS RESULTADOS
+              LATEST RESULTS
               <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -283,7 +283,7 @@ function App() {
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Newspaper size={18} color={getGameColor(game)} /> 
-            NOTÍCIAS
+            NEWS
             <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -309,7 +309,7 @@ function App() {
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Trophy size={18} color={getGameColor(game)} /> 
-            TORNEIOS
+            TOURNAMENTS
             <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
           </h2>
           {tournaments.filter(t => t.game === game).length > 0 ? (
