@@ -350,6 +350,9 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                         </div>
                         <div style={{ flex: 1, textAlign: 'left', fontWeight: 700 }}>{m.teamB.name}</div>
                       </div>
+                      <div style={{ width: '100px', textAlign: 'right', fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                        {m.leagueName}
+                      </div>
                     </div>
                   ))}
                 </div>

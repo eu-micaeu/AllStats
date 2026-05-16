@@ -15,6 +15,7 @@ export interface Match {
   gameTime: string;
   startTime?: string;
   stage?: string;
+  leagueName?: string;
   currentGame?: number;
   numberOfGames?: number;
   currentMapScoreA?: number;

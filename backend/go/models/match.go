@@ -24,6 +24,7 @@ type Match struct {
 	GameTime      string   `json:"gameTime"`
 	StartTime     string   `json:"startTime"`
 	Stage         string   `json:"stage"` // e.g., "Regular Season", "Playoffs"
+	LeagueName    string   `json:"leagueName"`
 	CurrentGame   int      `json:"currentGame"`
 	NumberOfGames int      `json:"numberOfGames"` // Bo1, Bo3, Bo5
 	CurrentMapScoreA int   `json:"currentMapScoreA"`

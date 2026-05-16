@@ -144,8 +144,9 @@ function App() {
         </div>
       </div>
 
-      <div style={{ width: '100px', textAlign: 'right', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-        {m.stage || ''}
+      <div style={{ width: '120px', textAlign: 'right', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', lineHeight: 1.2 }}>
+        <div style={{ fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.leagueName}</div>
+        <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>{m.stage || 'Match'}</div>
       </div>
 
       {/* Hover Tooltip */}
@@ -227,14 +228,23 @@ function App() {
     const gameMatches = matches.filter(m => m.game === game);
     const gameLeagues = tournaments.filter(t => t.game === game).slice(0, 5);
     
-    // Sort to prioritize LIVE matches
-    const sortedMatches = [...gameMatches].sort((a, b) => {
+    // Partidas: Live and Upcoming
+    const activeMatches = gameMatches.filter(m => m.status === 'live' || m.status === 'upcoming');
+    const sortedActive = [...activeMatches].sort((a, b) => {
       if (a.status === 'live' && b.status !== 'live') return -1;
       if (a.status !== 'live' && b.status === 'live') return 1;
-      return 0;
+      return new Date(a.startTime || '').getTime() - new Date(b.startTime || '').getTime();
     });
 
-    const displayMatches = sortedMatches.slice(0, 5);
+    // Resultados: Last 5 finished
+    const finishedMatches = gameMatches.filter(m => m.status === 'finished');
+    const sortedFinished = [...finishedMatches].sort((a, b) => 
+      new Date(b.startTime || '').getTime() - new Date(a.startTime || '').getTime()
+    );
+
+    const displayMatches = sortedActive.slice(0, 5);
+    const displayResults = sortedFinished.slice(0, 5);
+
     if (selectedGame !== game) return null;
     
     return (
@@ -246,14 +256,28 @@ function App() {
             PARTIDAS
             <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
           </h2>
-          {gameMatches.length > 0 ? (
+          {displayMatches.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {displayMatches.map((m) => renderMatchRow(m))}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No matches found.</div>
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No active matches found.</div>
           )}
         </section>
+
+        {/* Section: Resultados */}
+        {displayResults.length > 0 && (
+          <section style={{ marginBottom: '4rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ fontSize: '1.1rem' }}>🏁</div>
+              ÚLTIMOS RESULTADOS
+              <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {displayResults.map((m) => renderMatchRow(m))}
+            </div>
+          </section>
+        )}
 
         {/* Section: Noticias */}
         <section style={{ marginBottom: '4rem' }}>
