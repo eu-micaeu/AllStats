@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import type { Match, GameType } from './types/match';
 import type { User } from './types/user';
 import { fetchMatches } from './services/api';
@@ -9,6 +10,8 @@ import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import GameFilter from './components/GameFilter';
 import TournamentPage from './components/TournamentPage';
+import TournamentDetail from './components/TournamentDetail';
+import SeriesDetail from './components/SeriesDetail';
 import './styles/theme.css';
 
 function App() {
@@ -18,8 +21,8 @@ function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [selectedGame, setSelectedGame] = useState<GameType | 'All'>('All');
-  const [currentPage, setCurrentPage] = useState<'matches' | 'tournaments'>('matches');
-
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Check for existing user session
@@ -74,9 +77,6 @@ function App() {
     }
   };
 
-  if (loading) return <div className="container">Loading matches...</div>;
-  if (error) return <div className="container" style={{color: 'var(--valorant-color)'}}>{error}</div>;
-
   const renderGameSection = (game: GameType) => {
     const gameMatches = matches.filter(m => m.game === game);
     const displayMatches = selectedGame === 'All' ? gameMatches.slice(0, 6) : gameMatches;
@@ -127,31 +127,52 @@ function App() {
     );
   };
 
+  const getCurrentPage = () => {
+    if (location.pathname === '/') return 'matches';
+    if (location.pathname.startsWith('/tournaments')) return 'tournaments';
+    if (location.pathname.startsWith('/series')) return 'tournaments';
+    return 'matches';
+  };
+
+  if (loading) return <div className="container">Loading matches...</div>;
+  if (error) return <div className="container" style={{color: 'var(--valorant-color)'}}>{error}</div>;
+
   return (
     <div className="app-wrapper">
       <Header 
         user={user} 
         onAuthClick={() => setIsAuthOpen(true)} 
         onLogout={handleLogout}
-        currentPage={currentPage}
-        onPageSelect={setCurrentPage}
+        currentPage={getCurrentPage() as any}
+        onPageSelect={(page) => navigate(page === 'matches' ? '/' : '/tournaments')}
       />
       
       <div className="container">
         <main>
-          {currentPage === 'matches' ? (
-            <>
-              <GameFilter selectedGame={selectedGame} onGameSelect={setSelectedGame} />
+          <Routes>
+            <Route path="/" element={
+              <>
+                <GameFilter selectedGame={selectedGame} onGameSelect={setSelectedGame} />
+                {selectedGame === 'All' ? (
+                  games.map(game => renderGameSection(game))
+                ) : (
+                  renderGameSection(selectedGame as GameType)
+                )}
+              </>
+            } />
+            
+            <Route path="/tournaments" element={
+              <TournamentPage onTournamentClick={(id) => navigate(`/tournaments/${id}`)} />
+            } />
+            
+            <Route path="/tournaments/:id" element={
+              <TournamentDetailWrapper onSeriesClick={(id, name) => navigate(`/series/${id}?name=${encodeURIComponent(name)}`)} />
+            } />
 
-              {selectedGame === 'All' ? (
-                games.map(game => renderGameSection(game))
-              ) : (
-                renderGameSection(selectedGame as GameType)
-              )}
-            </>
-          ) : (
-            <TournamentPage />
-          )}
+            <Route path="/series/:id" element={
+              <SeriesDetailWrapper />
+            } />
+          </Routes>
         </main>
       </div>
 
@@ -160,5 +181,22 @@ function App() {
     </div>
   );
 }
+
+// Wrapper components to handle URL params
+import { useParams, useSearchParams } from 'react-router-dom';
+
+const TournamentDetailWrapper: React.FC<{ onSeriesClick: (id: string, name: string) => void }> = ({ onSeriesClick }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  return <TournamentDetail tournamentId={id!} onBack={() => navigate('/tournaments')} onSeriesClick={onSeriesClick} />;
+};
+
+const SeriesDetailWrapper: React.FC = () => {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const name = searchParams.get('name') || 'Series Details';
+  return <SeriesDetail seriesId={id!} seriesName={name} onBack={() => navigate(-1)} />;
+};
 
 export default App;

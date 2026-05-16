@@ -20,3 +20,62 @@ export const fetchTournaments = async (): Promise<Tournament[]> => {
   const data = await response.json();
   return data.tournaments;
 };
+
+export const fetchLeagueDetails = async (id: string): Promise<any> => {
+  const response = await fetch(`${API_BASE}/leagues/${id}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch league details');
+  }
+  return await response.json();
+};
+
+export const fetchSeriesTeams = async (id: string): Promise<any[]> => {
+  const response = await fetch(`${API_BASE}/series/${id}/teams`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch series teams');
+  }
+  const data = await response.json();
+  return data.teams;
+};
+
+export const fetchSeriesMatches = async (id: string): Promise<any[]> => {
+  const response = await fetch(`${API_BASE}/series/${id}/matches`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch series matches');
+  }
+  const data = await response.json();
+  return data.matches;
+};
+
+export const fetchSeriesInfo = async (id: string): Promise<any> => {
+  const response = await fetch(`${API_BASE}/series/${id}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch series info');
+  }
+  return await response.json();
+};
+
+export const fetchTournamentStandings = async (id: string): Promise<any[]> => {
+  const response = await fetch(`${API_BASE}/tournaments/${id}/standings`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch tournament standings');
+  }
+  return await response.json();
+};
+
+export const fetchTournamentBrackets = async (id: string): Promise<any[]> => {
+  const response = await fetch(`${API_BASE}/tournaments/${id}/brackets`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch tournament brackets');
+  }
+  return await response.json();
+};
+
+export const fetchSeriesStandings = async (id: string): Promise<any[]> => {
+  const response = await fetch(`${API_BASE}/series/${id}/standings`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch series standings');
+  }
+  const data = await response.json();
+  return data.standings;
+};

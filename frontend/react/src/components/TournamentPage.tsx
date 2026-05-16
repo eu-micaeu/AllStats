@@ -4,7 +4,11 @@ import type { Tournament } from '../types/tournament';
 import { fetchTournaments } from '../services/api';
 import '../styles/TournamentPage.css';
 
-const TournamentPage: React.FC = () => {
+interface TournamentPageProps {
+  onTournamentClick: (id: string) => void;
+}
+
+const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick }) => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,7 +62,12 @@ const TournamentPage: React.FC = () => {
       <div className="tournament-grid">
         {filteredTournaments.length > 0 ? (
           filteredTournaments.map((tournament) => (
-            <div key={tournament.id} className="tournament-card">
+            <div 
+              key={tournament.id} 
+              className="tournament-card" 
+              onClick={() => onTournamentClick(tournament.id)}
+              style={{ cursor: 'pointer' }}
+            >
               <span 
                 className="game-badge-compact" 
                 style={{ borderLeft: `2px solid ${getGameColor(tournament.game)}`, paddingLeft: '0.5rem' }}

@@ -24,4 +24,5 @@ type Match struct {
 	Status    string   `json:"status"` // "live", "finished", "upcoming"
 	GameTime  string   `json:"gameTime"`
 	StartTime string   `json:"startTime"`
+	Stage     string   `json:"stage"` // e.g., "Regular Season", "Playoffs"
 }

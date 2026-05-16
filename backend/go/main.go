@@ -85,6 +85,66 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"tournaments": psService.GetTournaments()})
 	})
 
+	r.GET("/api/leagues/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		league, err := psService.GetLeagueDetails(id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "League not found"})
+			return
+		}
+		c.JSON(http.StatusOK, league)
+	})
+
+	r.GET("/api/series/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		series, err := psService.GetSeriesInfo(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, series)
+	})
+
+	r.GET("/api/series/:id/teams", func(c *gin.Context) {
+		id := c.Param("id")
+		teams, err := psService.GetSeriesTeams(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"teams": teams})
+	})
+
+	r.GET("/api/series/:id/matches", func(c *gin.Context) {
+		id := c.Param("id")
+		matches, err := psService.GetSeriesMatches(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"matches": matches})
+	})
+
+	r.GET("/api/tournaments/:id/standings", func(c *gin.Context) {
+		id := c.Param("id")
+		standings, err := psService.GetTournamentStandings(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, standings)
+	})
+
+	r.GET("/api/tournaments/:id/brackets", func(c *gin.Context) {
+		id := c.Param("id")
+		brackets, err := psService.GetTournamentBrackets(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, brackets)
+	})
+
 	// Auth Routes
 	r.POST("/api/register", func(c *gin.Context) {
 		var req models.RegisterRequest

@@ -38,6 +38,244 @@ func (s *PandaScoreService) GetTournaments() []models.Tournament {
 	return s.tournaments
 }
 
+func (s *PandaScoreService) GetLeagueDetails(id string) (interface{}, error) {
+	url := fmt.Sprintf("https://api.pandascore.co/leagues/%s", id)
+	return s.getJson(url)
+}
+
+func (s *PandaScoreService) GetSeriesInfo(id string) (interface{}, error) {
+	url := fmt.Sprintf("https://api.pandascore.co/series/%s", id)
+	return s.getJson(url)
+}
+
+func (s *PandaScoreService) GetSeriesTeams(id string) ([]models.TeamDetail, error) {
+	fmt.Printf("GetSeriesTeams: Fetching series %s to find tournaments...\n", id)
+	
+	seriesUrl := fmt.Sprintf("https://api.pandascore.co/series/%s", id)
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", seriesUrl, nil)
+	req.Header.Set("Authorization", "Bearer "+s.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var series struct {
+		Tournaments []struct {
+			ID int `json:"id"`
+		} `json:"tournaments"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&series); err != nil {
+		return nil, err
+	}
+
+	if len(series.Tournaments) == 0 {
+		return []models.TeamDetail{}, nil
+	}
+
+	tournamentId := series.Tournaments[0].ID
+	teamsUrl := fmt.Sprintf("https://api.pandascore.co/tournaments/%d/teams", tournamentId)
+	reqT, _ := http.NewRequest("GET", teamsUrl, nil)
+	reqT.Header.Set("Authorization", "Bearer "+s.token)
+	reqT.Header.Set("Accept", "application/json")
+
+	respT, err := client.Do(reqT)
+	if err != nil {
+		return nil, err
+	}
+	defer respT.Body.Close()
+
+	var batch []struct {
+		ID       int    `json:"id"`
+		Name     string `json:"name"`
+		Acronym  string `json:"acronym"`
+		ImageURL string `json:"image_url"`
+		Players  []struct {
+			ID          int    `json:"id"`
+			Name        string `json:"name"`
+			FirstName   string `json:"first_name"`
+			LastName    string `json:"last_name"`
+			Role        string `json:"role"`
+			ImageURL    string `json:"image_url"`
+			Nationality string `json:"nationality"`
+		} `json:"players"`
+	}
+
+	if err := json.NewDecoder(respT.Body).Decode(&batch); err != nil {
+		return nil, err
+	}
+
+	teams := []models.TeamDetail{}
+	for _, pt := range batch {
+		players := []models.Player{}
+		for _, pp := range pt.Players {
+			players = append(players, models.Player{
+				ID:          fmt.Sprintf("%d", pp.ID),
+				Name:        pp.Name,
+				FirstName:   pp.FirstName,
+				LastName:    pp.LastName,
+				Role:        pp.Role,
+				ImageURL:    pp.ImageURL,
+				Nationality: pp.Nationality,
+			})
+		}
+		teams = append(teams, models.TeamDetail{
+			ID:       fmt.Sprintf("%d", pt.ID),
+			Name:     pt.Name,
+			Acronym:  pt.Acronym,
+			ImageURL: pt.ImageURL,
+			Players:  players,
+		})
+	}
+	return teams, nil
+}
+
+func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) {
+	url := fmt.Sprintf("https://api.pandascore.co/series/%s/matches?sort=begin_at&per_page=100", id)
+	
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+s.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var batch []struct {
+		ID       int    `json:"id"`
+		Status   string `json:"status"`
+		BeginAt  string `json:"begin_at"`
+		Videogame struct {
+			Slug string `json:"slug"`
+		} `json:"videogame"`
+		Tournament struct {
+			Name string `json:"name"`
+		} `json:"tournament"`
+		Opponents []struct {
+			Opponent struct {
+				ID       int    `json:"id"`
+				Name     string `json:"name"`
+				ImageURL string `json:"image_url"`
+			} `json:"opponent"`
+		} `json:"opponents"`
+		Results []struct {
+			Score  int `json:"score"`
+			TeamID int `json:"team_id"`
+		} `json:"results"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&batch); err != nil {
+		return nil, err
+	}
+
+	matches := []models.Match{}
+	for _, pm := range batch {
+		var displayGame models.GameType
+		switch pm.Videogame.Slug {
+		case "csgo", "cs-go", "cs-2", "cs2":
+			displayGame = models.CS2
+		case "valorant":
+			displayGame = models.Valorant
+		case "league-of-legends":
+			displayGame = models.LoL
+		case "overwatch", "ow", "overwatch-2":
+			displayGame = models.Overwatch
+		default:
+			continue
+		}
+
+		status := pm.Status
+		if status == "running" {
+			status = "live"
+		} else if status == "not_started" {
+			status = "upcoming"
+		}
+
+		match := models.Match{
+			ID:        fmt.Sprintf("%d", pm.ID),
+			Status:    status,
+			Game:      displayGame,
+			StartTime: pm.BeginAt,
+			Stage:     pm.Tournament.Name,
+		}
+
+		if len(pm.Opponents) >= 1 {
+			match.TeamA = models.Team{
+				ID:   fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID),
+				Name: pm.Opponents[0].Opponent.Name,
+				Logo: pm.Opponents[0].Opponent.ImageURL,
+			}
+		} else {
+			match.TeamA = models.Team{ID: "tbd1", Name: "TBD", Logo: ""}
+		}
+
+		if len(pm.Opponents) >= 2 {
+			match.TeamB = models.Team{
+				ID:   fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID),
+				Name: pm.Opponents[1].Opponent.Name,
+				Logo: pm.Opponents[1].Opponent.ImageURL,
+			}
+		} else {
+			match.TeamB = models.Team{ID: "tbd2", Name: "TBD", Logo: ""}
+		}
+
+		for _, res := range pm.Results {
+			if match.TeamA.ID != "tbd1" && fmt.Sprintf("%d", res.TeamID) == match.TeamA.ID {
+				match.TeamA.Score = res.Score
+			} else if match.TeamB.ID != "tbd2" && fmt.Sprintf("%d", res.TeamID) == match.TeamB.ID {
+				match.TeamB.Score = res.Score
+			}
+		}
+
+		matches = append(matches, match)
+	}
+
+	return matches, nil
+}
+
+func (s *PandaScoreService) GetSeriesStandings(id string) (interface{}, error) {
+	// Keep for backward compatibility or general series standings if exists
+	url := fmt.Sprintf("https://api.pandascore.co/series/%s/standings", id)
+	// ... rest of implementation
+	return s.getJson(url)
+}
+
+func (s *PandaScoreService) GetTournamentStandings(id string) (interface{}, error) {
+	url := fmt.Sprintf("https://api.pandascore.co/tournaments/%s/standings", id)
+	return s.getJson(url)
+}
+
+func (s *PandaScoreService) GetTournamentBrackets(id string) (interface{}, error) {
+	url := fmt.Sprintf("https://api.pandascore.co/tournaments/%s/brackets", id)
+	return s.getJson(url)
+}
+
+func (s *PandaScoreService) getJson(url string) (interface{}, error) {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+s.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var data interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 func (s *PandaScoreService) Updates() chan models.Match {
 	return s.updates
 }
