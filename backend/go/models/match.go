@@ -6,7 +6,6 @@ const (
 	LoL       GameType = "League of Legends"
 	CS2       GameType = "Counter-Strike 2"
 	Valorant  GameType = "Valorant"
-	Overwatch GameType = "Overwatch"
 )
 
 type Team struct {
@@ -17,12 +16,16 @@ type Team struct {
 }
 
 type Match struct {
-	ID        string   `json:"id"`
-	Game      GameType `json:"game"`
-	TeamA     Team     `json:"teamA"`
-	TeamB     Team     `json:"teamB"`
-	Status    string   `json:"status"` // "live", "finished", "upcoming"
-	GameTime  string   `json:"gameTime"`
-	StartTime string   `json:"startTime"`
-	Stage     string   `json:"stage"` // e.g., "Regular Season", "Playoffs"
+	ID            string   `json:"id"`
+	Game          GameType `json:"game"`
+	TeamA         Team     `json:"teamA"`
+	TeamB         Team     `json:"teamB"`
+	Status        string   `json:"status"` // "live", "finished", "upcoming"
+	GameTime      string   `json:"gameTime"`
+	StartTime     string   `json:"startTime"`
+	Stage         string   `json:"stage"` // e.g., "Regular Season", "Playoffs"
+	CurrentGame   int      `json:"currentGame"`
+	NumberOfGames int      `json:"numberOfGames"` // Bo1, Bo3, Bo5
+	CurrentMapScoreA int   `json:"currentMapScoreA"`
+	CurrentMapScoreB int   `json:"currentMapScoreB"`
 }

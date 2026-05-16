@@ -38,7 +38,6 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick }) =>
       case 'Counter-Strike 2': return 'var(--cs2-color)';
       case 'Valorant': return 'var(--valorant-color)';
       case 'League of Legends': return 'var(--lol-color)';
-      case 'Overwatch': return '#f99e1a';
       default: return 'var(--accent-color)';
     }
   };

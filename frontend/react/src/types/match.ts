@@ -1,4 +1,4 @@
-export type GameType = 'League of Legends' | 'Counter-Strike 2' | 'Valorant' | 'Overwatch';
+export type GameType = 'League of Legends' | 'Counter-Strike 2' | 'Valorant';
 
 export interface Team {
   id: string;
@@ -6,7 +6,6 @@ export interface Team {
   logo: string;
   score: number;
 }
-
 export interface Match {
   id: string;
   game: GameType;
@@ -15,4 +14,10 @@ export interface Match {
   status: 'live' | 'finished' | 'upcoming';
   gameTime: string;
   startTime?: string;
+  stage?: string;
+  currentGame?: number;
+  numberOfGames?: number;
+  currentMapScoreA?: number;
+  currentMapScoreB?: number;
 }
+

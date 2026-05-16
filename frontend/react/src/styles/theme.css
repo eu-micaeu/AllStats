@@ -94,15 +94,95 @@ body {
   color: white;
 }
 
-.nav-link.active::after, .nav-link-btn.active::after {
-  content: '';
+/* Match Hover Tooltip */
+.match-row {
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.match-row:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.match-tooltip {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: var(--accent-color);
-  border-radius: 2px;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  width: 300px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.match-row:hover .match-tooltip {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tooltip-header {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--accent-color);
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.5rem;
+}
+
+.tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tooltip-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tooltip-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.tooltip-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.tooltip-team-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tooltip-vs {
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: var(--text-secondary);
+  padding: 0 1rem;
+}
+
+.tooltip-footer {
+  margin-top: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 .user-profile {
@@ -260,51 +340,63 @@ body {
 }
 
 /* Game Filter Styles */
-.game-filter-container {
+.game-filter {
   display: flex;
   justify-content: center;
-  gap: 1.5rem;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
+  gap: 3rem;
+  margin-bottom: 4rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .game-filter-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0.75rem 2rem;
+  background: none;
+  border: none;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  min-width: 140px;
+  position: relative;
 }
 
-.game-filter-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  transform: translateY(-4px);
-  border-color: var(--game-color);
+.game-icon-wrapper {
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.game-filter-btn.active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--game-color);
-  box-shadow: 0 0 20px -5px var(--game-color);
+.game-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) brightness(0.5);
+  transition: all 0.4s ease;
+  transform: scale(0.9);
 }
 
-.game-icon {
-  font-size: 1.5rem;
+.game-filter-btn:hover .game-icon-img {
+  filter: grayscale(0.5) brightness(0.8);
+  transform: scale(1);
 }
 
-.game-label {
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  transition: color 0.3s;
+.game-filter-btn.active .game-icon-img {
+  filter: grayscale(0) brightness(1);
+  transform: scale(1.15);
 }
 
-.game-filter-btn:hover .game-label,
-.game-filter-btn.active .game-label {
-  color: white;
+.game-filter-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: var(--game-color);
+  border-radius: 4px;
+  box-shadow: 0 0 15px var(--game-color);
 }

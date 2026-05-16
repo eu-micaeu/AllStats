@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -132,7 +133,7 @@ func main() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, standings)
+		c.JSON(http.StatusOK, gin.H{"standings": standings})
 	})
 
 	r.GET("/api/tournaments/:id/brackets", func(c *gin.Context) {
@@ -143,6 +144,71 @@ func main() {
 			return
 		}
 		c.JSON(http.StatusOK, brackets)
+	})
+
+	r.GET("/api/teams/search", func(c *gin.Context) {
+		query := c.Query("q")
+		if query == "" {
+			c.JSON(http.StatusOK, gin.H{"teams": []models.TeamSimple{}})
+			return
+		}
+		teams, err := psService.SearchTeams(query)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"teams": teams})
+	})
+
+	r.GET("/api/user/:id/favorites", func(c *gin.Context) {
+		id := c.Param("id")
+		user, err := authService.GetUserByID(id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"favorites": user.FavoriteTeams})
+	})
+
+	r.POST("/api/user/:id/favorites", func(c *gin.Context) {
+		id := c.Param("id")
+		var favorites []models.TeamSimple
+		if err := c.ShouldBindJSON(&favorites); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if err := authService.UpdateFavoriteTeams(id, favorites); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Favorites updated successfully"})
+	})
+
+	r.GET("/api/user/:id/favorite-matches", func(c *gin.Context) {
+		id := c.Param("id")
+		fmt.Printf("FavoriteMatches: Fetching for user ID: %s\n", id)
+		user, err := authService.GetUserByID(id)
+		if err != nil {
+			fmt.Printf("FavoriteMatches: User %s not found: %v\n", id, err)
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+
+		teamIDs := []string{}
+		for _, t := range user.FavoriteTeams {
+			teamIDs = append(teamIDs, t.ID)
+		}
+		fmt.Printf("FavoriteMatches: Found %d favorite teams for user %s: %v\n", len(teamIDs), id, teamIDs)
+
+		matches, err := psService.GetTeamsMatches(teamIDs)
+		if err != nil {
+			fmt.Printf("FavoriteMatches: Error fetching matches: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		fmt.Printf("FavoriteMatches: Returning %d matches for user %s\n", len(matches), id)
+		c.JSON(http.StatusOK, gin.H{"matches": matches})
 	})
 
 	// Auth Routes

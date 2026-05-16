@@ -42,14 +42,6 @@ func NewMockService() *MockService {
 			{ID: "v4", Game: models.Valorant, Status: "finished", GameTime: "2-0", TeamA: models.Team{ID: "t31", Name: "EDG", Score: 2}, TeamB: models.Team{ID: "t32", Name: "DRX", Score: 0}},
 			{ID: "v5", Game: models.Valorant, Status: "upcoming", StartTime: "23:00", TeamA: models.Team{ID: "t33", Name: "KRÜ", Score: 0}, TeamB: models.Team{ID: "t34", Name: "MIBR", Score: 0}},
 			{ID: "v6", Game: models.Valorant, Status: "live", GameTime: "Map 2", TeamA: models.Team{ID: "t35", Name: "Gen.G", Score: 10}, TeamB: models.Team{ID: "t36", Name: "T1", Score: 4}},
-
-			// Overwatch
-			{ID: "o1", Game: models.Overwatch, Status: "live", GameTime: "Map 2", TeamA: models.Team{ID: "t37", Name: "Seoul Dynasty", Score: 1}, TeamB: models.Team{ID: "t38", Name: "Shanghai Dragons", Score: 0}},
-			{ID: "o2", Game: models.Overwatch, Status: "live", GameTime: "Map 4", TeamA: models.Team{ID: "t39", Name: "San Francisco Shock", Score: 2}, TeamB: models.Team{ID: "t40", Name: "Dallas Fuel", Score: 1}},
-			{ID: "o3", Game: models.Overwatch, Status: "upcoming", StartTime: "21:00", TeamA: models.Team{ID: "t41", Name: "Florida Mayhem", Score: 0}, TeamB: models.Team{ID: "t42", Name: "Houston Outlaws", Score: 0}},
-			{ID: "o4", Game: models.Overwatch, Status: "finished", GameTime: "3-1", TeamA: models.Team{ID: "t43", Name: "Atlanta Reign", Score: 3}, TeamB: models.Team{ID: "t44", Name: "Boston Uprising", Score: 1}},
-			{ID: "o5", Game: models.Overwatch, Status: "upcoming", StartTime: "22:30", TeamA: models.Team{ID: "t45", Name: "London Spitfire", Score: 0}, TeamB: models.Team{ID: "t46", Name: "Gladiators", Score: 0}},
-			{ID: "o6", Game: models.Overwatch, Status: "live", GameTime: "Map 1", TeamA: models.Team{ID: "t47", Name: "Toronto Defiant", Score: 0}, TeamB: models.Team{ID: "t48", Name: "NYXL", Score: 0}},
 		},
 	}
 

@@ -152,6 +152,17 @@ func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) 
 		ID       int    `json:"id"`
 		Status   string `json:"status"`
 		BeginAt  string `json:"begin_at"`
+		NumberOfGames int `json:"number_of_games"`
+		Games    []struct {
+			Status string `json:"status"`
+			Position int `json:"position"`
+			Teams []struct {
+				Team struct {
+					ID int `json:"id"`
+				} `json:"team"`
+				Score int `json:"score"`
+			} `json:"teams"`
+		} `json:"games"`
 		Videogame struct {
 			Slug string `json:"slug"`
 		} `json:"videogame"`
@@ -185,8 +196,6 @@ func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) 
 			displayGame = models.Valorant
 		case "league-of-legends":
 			displayGame = models.LoL
-		case "overwatch", "ow", "overwatch-2":
-			displayGame = models.Overwatch
 		default:
 			continue
 		}
@@ -198,12 +207,50 @@ func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) 
 			status = "upcoming"
 		}
 
+		currentGame := 0
+		if status == "live" {
+			for _, g := range pm.Games {
+				if g.Status == "running" {
+					currentGame = g.Position
+					break
+				}
+			}
+			if currentGame == 0 && len(pm.Games) > 0 {
+				for _, g := range pm.Games {
+					if g.Status != "finished" {
+						currentGame = g.Position
+						break
+					}
+				}
+			}
+		} else if status == "finished" {
+			currentGame = pm.NumberOfGames
+		}
+
 		match := models.Match{
-			ID:        fmt.Sprintf("%d", pm.ID),
-			Status:    status,
-			Game:      displayGame,
-			StartTime: pm.BeginAt,
-			Stage:     pm.Tournament.Name,
+			ID:            fmt.Sprintf("%d", pm.ID),
+			Status:        status,
+			Game:          displayGame,
+			StartTime:     pm.BeginAt,
+			Stage:         pm.Tournament.Name,
+			NumberOfGames: pm.NumberOfGames,
+			CurrentGame:   currentGame,
+		}
+
+		// Extract Map-specific scores (rounds/points)
+		if currentGame > 0 {
+			for _, g := range pm.Games {
+				if g.Position == currentGame {
+					for _, ts := range g.Teams {
+						if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
+							match.CurrentMapScoreA = ts.Score
+						} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
+							match.CurrentMapScoreB = ts.Score
+						}
+					}
+					break
+				}
+			}
 		}
 
 		if len(pm.Opponents) >= 1 {
@@ -240,13 +287,6 @@ func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) 
 	return matches, nil
 }
 
-func (s *PandaScoreService) GetSeriesStandings(id string) (interface{}, error) {
-	// Keep for backward compatibility or general series standings if exists
-	url := fmt.Sprintf("https://api.pandascore.co/series/%s/standings", id)
-	// ... rest of implementation
-	return s.getJson(url)
-}
-
 func (s *PandaScoreService) GetTournamentStandings(id string) (interface{}, error) {
 	url := fmt.Sprintf("https://api.pandascore.co/tournaments/%s/standings", id)
 	return s.getJson(url)
@@ -255,6 +295,45 @@ func (s *PandaScoreService) GetTournamentStandings(id string) (interface{}, erro
 func (s *PandaScoreService) GetTournamentBrackets(id string) (interface{}, error) {
 	url := fmt.Sprintf("https://api.pandascore.co/tournaments/%s/brackets", id)
 	return s.getJson(url)
+}
+
+func (s *PandaScoreService) SearchTeams(query string) ([]models.TeamSimple, error) {
+	url := fmt.Sprintf("https://api.pandascore.co/teams?search[name]=%s&per_page=20", query)
+	
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+s.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var batch []struct {
+		ID        int    `json:"id"`
+		Name      string `json:"name"`
+		ImageURL  string `json:"image_url"`
+		Videogame struct {
+			Name string `json:"name"`
+		} `json:"videogame"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&batch); err != nil {
+		return nil, err
+	}
+
+	teams := []models.TeamSimple{}
+	for _, pt := range batch {
+		teams = append(teams, models.TeamSimple{
+			ID:   fmt.Sprintf("%d", pt.ID),
+			Name: pt.Name,
+			Logo: pt.ImageURL,
+			Game: pt.Videogame.Name,
+		})
+	}
+	return teams, nil
 }
 
 func (s *PandaScoreService) getJson(url string) (interface{}, error) {
@@ -276,6 +355,151 @@ func (s *PandaScoreService) getJson(url string) (interface{}, error) {
 	return data, nil
 }
 
+func (s *PandaScoreService) GetTeamsMatches(teamIDs []string) ([]models.Match, error) {
+	if len(teamIDs) == 0 {
+		return []models.Match{}, nil
+	}
+
+	idsStr := ""
+	for i, id := range teamIDs {
+		if i > 0 {
+			idsStr += ","
+		}
+		idsStr += id
+	}
+
+	// Filter for running and not_started to show what's relevant now and next
+	url := fmt.Sprintf("https://api.pandascore.co/matches?filter[opponent_id]=%s&filter[status]=running,not_started&sort=begin_at&per_page=50", idsStr)
+	
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+s.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var batch []struct {
+		ID       int    `json:"id"`
+		Status   string `json:"status"`
+		BeginAt  string `json:"begin_at"`
+		NumberOfGames int `json:"number_of_games"`
+		Games    []struct {
+			Status string `json:"status"`
+			Position int `json:"position"`
+			Teams []struct {
+				Team struct {
+					ID int `json:"id"`
+				} `json:"team"`
+				Score int `json:"score"`
+			} `json:"teams"`
+		} `json:"games"`
+		Videogame struct {
+			Slug string `json:"slug"`
+		} `json:"videogame"`
+		Tournament struct {
+			Name string `json:"name"`
+		} `json:"tournament"`
+		Opponents []struct {
+			Opponent struct {
+				ID       int    `json:"id"`
+				Name     string `json:"name"`
+				ImageURL string `json:"image_url"`
+			} `json:"opponent"`
+		} `json:"opponents"`
+		Results []struct {
+			Score  int `json:"score"`
+			TeamID int `json:"team_id"`
+		} `json:"results"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&batch); err != nil {
+		return nil, err
+	}
+
+	matches := []models.Match{}
+	for _, pm := range batch {
+		var displayGame models.GameType
+		switch pm.Videogame.Slug {
+		case "csgo", "cs-go", "cs-2", "cs2":
+			displayGame = models.CS2
+		case "valorant":
+			displayGame = models.Valorant
+		case "league-of-legends":
+			displayGame = models.LoL
+		default:
+			continue
+		}
+
+		status := pm.Status
+		if status == "running" {
+			status = "live"
+		} else if status == "not_started" {
+			status = "upcoming"
+		}
+
+		currentGame := 0
+		if status == "live" {
+			for _, g := range pm.Games {
+				if g.Status == "running" {
+					currentGame = g.Position
+					break
+				}
+			}
+		}
+
+		match := models.Match{
+			ID:            fmt.Sprintf("%d", pm.ID),
+			Status:        status,
+			Game:          displayGame,
+			StartTime:     pm.BeginAt,
+			Stage:         pm.Tournament.Name,
+			NumberOfGames: pm.NumberOfGames,
+			CurrentGame:   currentGame,
+		}
+
+		if currentGame > 0 {
+			for _, g := range pm.Games {
+				if g.Position == currentGame {
+					for _, ts := range g.Teams {
+						if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
+							match.CurrentMapScoreA = ts.Score
+						} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
+							match.CurrentMapScoreB = ts.Score
+						}
+					}
+				}
+			}
+		}
+
+		if len(pm.Opponents) >= 1 {
+			match.TeamA = models.Team{ID: fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID), Name: pm.Opponents[0].Opponent.Name, Logo: pm.Opponents[0].Opponent.ImageURL}
+		} else {
+			match.TeamA = models.Team{ID: "tbd1", Name: "TBD"}
+		}
+		if len(pm.Opponents) >= 2 {
+			match.TeamB = models.Team{ID: fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID), Name: pm.Opponents[1].Opponent.Name, Logo: pm.Opponents[1].Opponent.ImageURL}
+		} else {
+			match.TeamB = models.Team{ID: "tbd2", Name: "TBD"}
+		}
+
+		for _, res := range pm.Results {
+			if match.TeamA.ID != "tbd1" && fmt.Sprintf("%d", res.TeamID) == match.TeamA.ID {
+				match.TeamA.Score = res.Score
+			} else if match.TeamB.ID != "tbd2" && fmt.Sprintf("%d", res.TeamID) == match.TeamB.ID {
+				match.TeamB.Score = res.Score
+			}
+		}
+
+		matches = append(matches, match)
+	}
+
+	return matches, nil
+}
+
 func (s *PandaScoreService) Updates() chan models.Match {
 	return s.updates
 }
@@ -294,7 +518,7 @@ func (s *PandaScoreService) fetchTournaments() {
 	client := &http.Client{}
 
 	for page := 1; page <= 10; page++ {
-		url := fmt.Sprintf("https://api.pandascore.co/leagues?filter[videogame_id]=1,3,26,14&sort=name&page=%d&per_page=100", page)
+		url := fmt.Sprintf("https://api.pandascore.co/leagues?filter[videogame_id]=1,3,26&sort=name&page=%d&per_page=100", page)
 		
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Set("Authorization", "Bearer "+s.token)
@@ -341,8 +565,6 @@ func (s *PandaScoreService) fetchTournaments() {
 				displayGame = models.Valorant
 			case "league-of-legends":
 				displayGame = models.LoL
-			case "overwatch", "ow", "overwatch-2":
-				displayGame = models.Overwatch
 			default:
 				continue
 			}
@@ -361,7 +583,7 @@ func (s *PandaScoreService) fetchTournaments() {
 }
 
 func (s *PandaScoreService) fetchFromPandaScore() {
-	games := []string{"league-of-legends", "csgo", "valorant", "overwatch"}
+	games := []string{"league-of-legends", "csgo", "valorant"}
 	newMatches := []models.Match{}
 
 	client := &http.Client{}
@@ -387,9 +609,23 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 			ID       int    `json:"id"`
 			Status   string `json:"status"`
 			BeginAt  string `json:"begin_at"`
+			NumberOfGames int `json:"number_of_games"`
+			Games    []struct {
+				Status string `json:"status"`
+				Position int `json:"position"`
+				Teams []struct {
+					Team struct {
+						ID int `json:"id"`
+					} `json:"team"`
+					Score int `json:"score"`
+				} `json:"teams"`
+			} `json:"games"`
 			Videogame struct {
 				Slug string `json:"slug"`
 			} `json:"videogame"`
+			Tournament struct {
+				Name string `json:"name"`
+			} `json:"tournament"`
 			Opponents []struct {
 				Opponent struct {
 					ID       int    `json:"id"`
@@ -420,8 +656,6 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 				displayGame = models.Valorant
 			case "league-of-legends":
 				displayGame = models.LoL
-			case "ow", "overwatch", "overwatch-2":
-				displayGame = models.Overwatch
 			default:
 				continue
 			}
@@ -433,11 +667,50 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 				status = "upcoming"
 			}
 
+			currentGame := 0
+			if status == "live" {
+				for _, g := range pm.Games {
+					if g.Status == "running" {
+						currentGame = g.Position
+						break
+					}
+				}
+				if currentGame == 0 && len(pm.Games) > 0 {
+					for _, g := range pm.Games {
+						if g.Status != "finished" {
+							currentGame = g.Position
+							break
+						}
+					}
+				}
+			} else if status == "finished" {
+				currentGame = pm.NumberOfGames
+			}
+
 			match := models.Match{
-				ID:        fmt.Sprintf("%d", pm.ID),
-				Status:    status,
-				Game:      displayGame,
-				StartTime: pm.BeginAt,
+				ID:            fmt.Sprintf("%d", pm.ID),
+				Status:        status,
+				Game:          displayGame,
+				StartTime:     pm.BeginAt,
+				Stage:         pm.Tournament.Name,
+				NumberOfGames: pm.NumberOfGames,
+				CurrentGame:   currentGame,
+			}
+
+			// Extract Map-specific scores (rounds/points)
+			if currentGame > 0 {
+				for _, g := range pm.Games {
+					if g.Position == currentGame {
+						for _, ts := range g.Teams {
+							if len(pm.Opponents) >= 1 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[0].Opponent.ID) {
+								match.CurrentMapScoreA = ts.Score
+							} else if len(pm.Opponents) >= 2 && fmt.Sprintf("%d", ts.Team.ID) == fmt.Sprintf("%d", pm.Opponents[1].Opponent.ID) {
+								match.CurrentMapScoreB = ts.Score
+							}
+						}
+						break
+					}
+				}
 			}
 
 			if len(pm.Opponents) >= 1 {

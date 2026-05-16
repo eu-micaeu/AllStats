@@ -40,8 +40,10 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
         if (infoData.tournaments) {
           const dataMap: any = {};
           await Promise.all(infoData.tournaments.map(async (t: any) => {
-            const isPlayoffs = t.name.toLowerCase().includes('playoff');
-            if (isPlayoffs) {
+            const nameLower = t.name.toLowerCase();
+            const isElimination = nameLower.includes('playoff') || nameLower.includes('play-in');
+            
+            if (isElimination) {
               dataMap[t.id] = { type: 'bracket', data: await fetchTournamentBrackets(t.id) };
             } else {
               dataMap[t.id] = { type: 'standings', data: await fetchTournamentStandings(t.id) };
@@ -61,37 +63,55 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
 
   if (loading) return <div className="loading-detail">Loading deep dive details...</div>;
 
-  const renderStandings = (data: any[]) => (
-    <div style={{ background: 'var(--card-bg)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '2rem' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-        <thead style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <tr>
-            <th style={{ padding: '0.75rem 1rem' }}>Rank</th>
-            <th style={{ padding: '0.75rem 1rem' }}>Team</th>
-            <th style={{ padding: '0.75rem 1rem' }}>W-L</th>
-            <th style={{ padding: '0.75rem 1rem' }}>Games</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((entry: any, index: number) => (
-            <tr key={entry.team?.id || index} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-              <td style={{ padding: '0.75rem 1rem', fontWeight: 800 }}>#{entry.rank || index + 1}</td>
-              <td style={{ padding: '0.75rem 1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  {entry.team?.image_url && <img src={entry.team.image_url} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />}
-                  <span style={{ fontWeight: 700 }}>{entry.team?.name || 'Unknown Team'}</span>
-                </div>
-              </td>
-              <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>{entry.wins}-{entry.losses}</td>
-              <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>{entry.game_wins || 0}W - {entry.game_losses || 0}L</td>
+  const renderStandings = (data: any[]) => {
+    if (!Array.isArray(data)) {
+      return (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+          Standings data not available for this stage.
+        </div>
+      );
+    }
+    
+    return (
+      <div style={{ background: 'var(--card-bg)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '2rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+          <thead style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <tr>
+              <th style={{ padding: '0.75rem 1rem' }}>Rank</th>
+              <th style={{ padding: '0.75rem 1rem' }}>Team</th>
+              <th style={{ padding: '0.75rem 1rem' }}>W-L</th>
+              <th style={{ padding: '0.75rem 1rem' }}>Games</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+          </thead>
+          <tbody>
+            {data.map((entry: any, index: number) => (
+              <tr key={entry.team?.id || index} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                <td style={{ padding: '0.75rem 1rem', fontWeight: 800 }}>#{entry.rank || index + 1}</td>
+                <td style={{ padding: '0.75rem 1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {entry.team?.image_url && <img src={entry.team.image_url} alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />}
+                    <span style={{ fontWeight: 700 }}>{entry.team?.name || 'Unknown Team'}</span>
+                  </div>
+                </td>
+                <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>{entry.wins}-{entry.losses}</td>
+                <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>{entry.game_wins || 0}W - {entry.game_losses || 0}L</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   const renderBracket = (bracketMatches: any[]) => {
+    if (!Array.isArray(bracketMatches)) {
+      return (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+          Bracket data not available for this stage.
+        </div>
+      );
+    }
+
     // Sort matches by scheduled_at to have a logical flow
     const sortedMatches = [...bracketMatches].sort((a: any, b: any) => 
       new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
@@ -99,17 +119,27 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
 
     // Group matches by round name
     const roundsMap = sortedMatches.reduce((acc: any, m: any) => {
-      // Use the match name to determine the round, e.g., "Grand Final", "Quarterfinals"
-      let roundName = 'Other';
       const name = m.name.toLowerCase();
-      if (name.includes('grand final')) roundName = 'Final';
-      else if (name.includes('semifinal') || name.includes('semi-final')) roundName = 'Semifinals';
-      else if (name.includes('quarterfinal') || name.includes('quarter-final')) roundName = 'Quarterfinals';
-      else if (name.includes('lower bracket final')) roundName = 'LB Final';
-      else if (name.includes('upper bracket final')) roundName = 'UB Final';
-      else if (name.includes('round 1')) roundName = 'Round 1';
-      else if (name.includes('round 2')) roundName = 'Round 2';
-      else if (name.includes('round 3')) roundName = 'Round 3';
+      let roundName = '';
+
+      // Prioritize identifying Lower Bracket to separate from Upper Bracket
+      const isLower = name.includes('lower') || name.includes('losers');
+      const isUpper = name.includes('upper') || name.includes('winners');
+
+      if (name.includes('grand final')) roundName = 'Grand Final';
+      else if (name.includes('final') && isLower) roundName = 'LB Final';
+      else if (name.includes('final') && isUpper) roundName = 'UB Final';
+      else if (name.includes('final')) roundName = 'Final';
+      else if (name.includes('semifinal') || name.includes('semi-final')) {
+        roundName = isLower ? 'LB Semifinals' : (isUpper ? 'UB Semifinals' : 'Semifinals');
+      }
+      else if (name.includes('quarterfinal') || name.includes('quarter-final')) {
+        roundName = isLower ? 'LB Quarterfinals' : (isUpper ? 'UB Quarterfinals' : 'Quarterfinals');
+      }
+      else if (name.includes('round 1')) roundName = isLower ? 'LB Round 1' : 'Round 1';
+      else if (name.includes('round 2')) roundName = isLower ? 'LB Round 2' : 'Round 2';
+      else if (name.includes('round 3')) roundName = isLower ? 'LB Round 3' : 'Round 3';
+      else if (name.includes('round 4')) roundName = isLower ? 'LB Round 4' : 'Round 4';
       else {
         // Fallback: extract the first part before the colon
         roundName = m.name.split(':')[0] || 'Bracket';
@@ -120,8 +150,17 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
       return acc;
     }, {});
 
-    // Logical order for round columns
-    const roundOrder = ['Round 1', 'Round 2', 'Quarterfinals', 'UB Final', 'LB Final', 'Semifinals', 'Final'];
+    // Logical order for round columns - progressive flow
+    const roundOrder = [
+      'Round 1', 'LB Round 1', 
+      'Round 2', 'LB Round 2', 
+      'Quarterfinals', 'UB Quarterfinals', 'LB Quarterfinals', 
+      'LB Round 3', 
+      'Semifinals', 'UB Semifinals', 'LB Semifinals', 
+      'LB Round 4', 
+      'UB Final', 'LB Final', 
+      'Final', 'Grand Final'
+    ];
     const sortedRounds = Object.keys(roundsMap).sort((a, b) => {
       const idxA = roundOrder.indexOf(a);
       const idxB = roundOrder.indexOf(b);
@@ -269,7 +308,12 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, justifyContent: 'center' }}>
                         <div style={{ flex: 1, textAlign: 'right', fontWeight: 700 }}>{m.teamA.name}</div>
                         <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontWeight: 900, minWidth: '50px', textAlign: 'center' }}>
-                          {m.status === 'live' ? 'LIVE' : m.status === 'upcoming' ? 'VS' : `${m.teamA.score} - ${m.teamB.score}`}
+                          {m.status === 'live' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                              <span style={{ fontSize: '0.75rem' }}>{m.teamA.score} - {m.teamB.score}</span>
+                              <span style={{ fontSize: '0.5rem', opacity: 0.8, color: 'var(--live-color)' }}>({m.currentMapScoreA}-{m.currentMapScoreB})</span>
+                            </div>
+                          ) : m.status === 'upcoming' ? 'VS' : `${m.teamA.score} - ${m.teamB.score}`}
                         </div>
                         <div style={{ flex: 1, textAlign: 'left', fontWeight: 700 }}>{m.teamB.name}</div>
                       </div>

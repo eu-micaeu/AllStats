@@ -79,3 +79,41 @@ export const fetchSeriesStandings = async (id: string): Promise<any[]> => {
   const data = await response.json();
   return data.standings;
 };
+
+export const searchTeams = async (query: string): Promise<TeamSimple[]> => {
+  const response = await fetch(`${API_BASE}/teams/search?q=${encodeURIComponent(query)}`);
+  if (!response.ok) {
+    throw new Error('Failed to search teams');
+  }
+  const data = await response.json();
+  return data.teams;
+};
+
+export const fetchUserFavorites = async (userId: string): Promise<TeamSimple[]> => {
+  const response = await fetch(`${API_BASE}/user/${userId}/favorites`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch favorites');
+  }
+  const data = await response.json();
+  return data.favorites || [];
+};
+
+export const updateUserFavorites = async (userId: string, favorites: TeamSimple[]): Promise<void> => {
+  const response = await fetch(`${API_BASE}/user/${userId}/favorites`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(favorites)
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update favorites');
+  }
+};
+
+export const fetchFavoriteMatches = async (userId: string): Promise<Match[]> => {
+  const response = await fetch(`${API_BASE}/user/${userId}/favorite-matches`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch favorite matches');
+  }
+  const data = await response.json();
+  return data.matches;
+};
