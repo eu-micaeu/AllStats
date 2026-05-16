@@ -66,16 +66,6 @@ const TournamentPage: React.FC = () => {
                 {tournament.game}
               </span>
               <h3 className="tournament-name">{tournament.name}</h3>
-              <p className="tournament-league">{tournament.league}</p>
-              <div className="tournament-meta">
-                <div className={`status-indicator status-${tournament.status}`} style={{ fontSize: '0.7rem' }}>
-                  {tournament.status === 'running' && <div className="pulse" style={{ width: '4px', height: '4px' }} />}
-                  {tournament.status}
-                </div>
-                <div className="tournament-date" style={{ fontSize: '0.7rem' }}>
-                  {tournament.beginAt ? new Date(tournament.beginAt).toLocaleDateString() : 'Active League'}
-                </div>
-              </div>
             </div>
           ))
         ) : (
