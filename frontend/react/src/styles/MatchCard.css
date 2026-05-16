@@ -1,0 +1,127 @@
+.match-card {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-left: 6px solid transparent;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.match-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
+}
+
+.game-lol { border-left-color: var(--lol-color); }
+.game-cs2 { border-left-color: var(--cs2-color); }
+.game-valorant { border-left-color: var(--valorant-color); }
+
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.game-label {
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.live-badge {
+  color: var(--live-color);
+  font-weight: 800;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upcoming-badge {
+  color: var(--text-secondary);
+  font-weight: 800;
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.match-card.upcoming {
+  opacity: 0.8;
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  background-color: var(--live-color);
+  border-radius: 50%;
+  animation: pulse-animation 1.5s infinite;
+}
+
+@keyframes pulse-animation {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+.match-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.team {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.team-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.team-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.team-name {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.score {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.vs-divider {
+  color: var(--text-secondary);
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.match-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+}
+
+.game-time {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}

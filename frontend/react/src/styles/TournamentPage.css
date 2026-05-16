@@ -1,0 +1,103 @@
+.tournament-page {
+  padding-top: 2rem;
+}
+
+.search-container {
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background-color: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--accent-color);
+}
+
+.tournament-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.tournament-card {
+  background-color: var(--card-bg);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s, border-color 0.2s;
+  padding: 0.75rem;
+  position: relative;
+}
+
+.tournament-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.game-badge-compact {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  display: block;
+  opacity: 0.8;
+}
+
+.tournament-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tournament-league {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  margin-bottom: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tournament-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  padding-top: 0.5rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-running { color: var(--live-color); }
+.status-upcoming { color: var(--accent-color); }
+
+.no-results {
+  text-align: center;
+  padding: 4rem;
+  color: var(--text-secondary);
+  grid-column: 1 / -1;
+}
