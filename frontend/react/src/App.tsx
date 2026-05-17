@@ -15,6 +15,8 @@ import SeriesDetail from './components/SeriesDetail';
 import ProfilePage from './components/ProfilePage';
 import './styles/theme.css';
 
+import MatchTooltip from './components/MatchTooltip';
+
 function App() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [favoriteMatches, setFavoriteMatches] = useState<Match[]>([]);
@@ -149,44 +151,7 @@ function App() {
         <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>{m.stage || 'Match'}</div>
       </div>
 
-      {/* Hover Tooltip */}
-      <div className="match-tooltip">
-        <div className="tooltip-header">{m.game} • {m.stage || 'Official Match'}</div>
-        <div className="tooltip-content">
-          <div className="tooltip-teams">
-            <div className="tooltip-team">
-              {m.teamA.logo ? <img src={m.teamA.logo} alt="" className="tooltip-logo" /> : <div className="tooltip-logo" style={{fontSize: '1.5rem'}}>🛡️</div>}
-              <span className="tooltip-team-name">{m.teamA.name}</span>
-            </div>
-            <div className="tooltip-score-display" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.1em', lineHeight: 1 }}>
-                {m.teamA.score} - {m.teamB.score}
-              </div>
-              {m.numberOfGames > 0 && (
-                <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800, marginTop: '0.2rem' }}>
-                  Best of {m.numberOfGames}
-                </div>
-              )}
-            </div>
-
-            <div className="tooltip-team">
-              {m.teamB.logo ? <img src={m.teamB.logo} alt="" className="tooltip-logo" /> : <div className="tooltip-logo" style={{fontSize: '1.5rem'}}>🛡️</div>}
-              <span className="tooltip-team-name">{m.teamB.name}</span>
-            </div>
-          </div>
-          <div className="tooltip-footer">
-            <span style={{ color: m.status === 'live' ? 'var(--live-color)' : 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem' }}>
-              {m.status === 'live' ? (
-                <>Ongoing Match • Map {m.currentGame || '?'}</>
-              ) : m.status === 'upcoming' ? (
-                `Starts at ${new Date(m.startTime || '').toLocaleString()}`
-              ) : (
-                'Match Finished'
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
+      <MatchTooltip match={m} />
     </div>
   );
 
@@ -226,7 +191,6 @@ function App() {
 
   const renderGameSection = (game: GameType) => {
     const gameMatches = matches.filter(m => m.game === game);
-    const gameLeagues = tournaments.filter(t => t.game === game).slice(0, 5);
     
     // Partidas: Live and Upcoming
     const activeMatches = gameMatches.filter(m => m.status === 'live' || m.status === 'upcoming');

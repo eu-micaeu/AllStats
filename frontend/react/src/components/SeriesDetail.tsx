@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Swords, Trophy, Layout } from 'lucide-react';
+import { ArrowLeft, Users, Swords, Layout } from 'lucide-react';
 import { 
   fetchSeriesTeams, 
   fetchSeriesMatches, 
@@ -7,7 +7,8 @@ import {
   fetchTournamentStandings,
   fetchTournamentBrackets
 } from '../services/api';
-import MatchCard from './MatchCard';
+import MatchTooltip from './MatchTooltip';
+import type { Match } from '../types/match';
 import '../styles/SeriesDetail.css';
 
 interface SeriesDetailProps {
@@ -115,7 +116,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
     );
   };
 
-  const renderBracket = (bracketMatches: any[]) => {
+  const renderBracket = (bracketMatches: any[], seriesGame?: string) => {
     if (!Array.isArray(bracketMatches)) {
       return (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
@@ -215,14 +216,36 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
 
                   const getDisplayName = (t: any) => t?.acronym || (t?.name ? (t.name.length > 8 ? t.name.substring(0, 5) + '..' : t.name) : 'TBD');
 
-                  const isLive = m.status === 'live';
+                  const isLive = m.status === 'live' || m.status === 'running';
+
+                  const mappedMatch: Match = {
+                    id: String(m.id),
+                    game: (seriesGame || m.videogame?.name || 'Counter-Strike 2') as any,
+                    status: isLive ? 'live' : (m.status === 'not_started' || m.status === 'upcoming' ? 'upcoming' : 'finished'),
+                    teamA: {
+                      id: String(teamA?.id || ''),
+                      name: teamA?.name || 'TBD',
+                      logo: teamA?.image_url || '',
+                      score: scoreA
+                    },
+                    teamB: {
+                      id: String(teamB?.id || ''),
+                      name: teamB?.name || 'TBD',
+                      logo: teamB?.image_url || '',
+                      score: scoreB
+                    },
+                    startTime: m.scheduled_at,
+                    stage: m.name,
+                    numberOfGames: m.number_of_games,
+                    gameTime: '',
+                  };
 
                   return (
-                    <div key={m.id} style={{ 
+                    <div key={m.id} className="match-row" style={{ 
                       background: 'var(--card-bg)', 
                       border: isLive ? '1px solid var(--live-color)' : '1px solid rgba(255,255,255,0.05)', 
                       borderRadius: '4px',
-                      overflow: 'hidden',
+                      overflow: 'visible', // Changed from hidden to allow tooltip visibility
                       boxShadow: isLive ? '0 0 10px rgba(34, 197, 94, 0.2)' : 'none',
                       position: 'relative'
                     }}>
@@ -273,6 +296,18 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                         </span>
                         <span style={{ fontWeight: 900, fontSize: '0.75rem', color: winnerId === teamB?.id ? 'var(--accent-color)' : 'white' }}>{scoreB}</span>
                       </div>
+                      <div style={{ 
+                        fontSize: '0.5rem', 
+                        color: 'var(--text-secondary)', 
+                        textAlign: 'center', 
+                        padding: '0.2rem 0',
+                        borderTop: '1px solid rgba(255,255,255,0.02)',
+                        background: 'rgba(0,0,0,0.1)',
+                        fontWeight: 600
+                      }}>
+                        {new Date(m.scheduled_at).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <MatchTooltip match={mappedMatch} />
                     </div>
                   );
                 })}
@@ -339,7 +374,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {stageMatches.map((m: any) => (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.01)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85rem' }}>
+                    <div key={m.id} className="match-row" style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.01)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85rem', position: 'relative' }}>
                       <div style={{ width: '70px', color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600 }}>{new Date(m.startTime).toLocaleDateString()}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, justifyContent: 'center' }}>
                         <div style={{ flex: 1, textAlign: 'right', fontWeight: 700 }}>{m.teamA.name}</div>
@@ -353,6 +388,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                       <div style={{ width: '100px', textAlign: 'right', fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         {m.leagueName}
                       </div>
+                      <MatchTooltip match={m as Match} />
                     </div>
                   ))}
                 </div>
@@ -398,7 +434,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '2rem', color: 'white', textTransform: 'uppercase', borderLeft: '4px solid var(--accent-color)', paddingLeft: '1rem' }}>
                   {t.name}
                 </h3>
-                {data.type === 'bracket' ? renderBracket(data.data) : renderStandings(data.data)}
+                {data.type === 'bracket' ? renderBracket(data.data, seriesInfo?.videogame?.name) : renderStandings(data.data)}
               </div>
             );
           })}

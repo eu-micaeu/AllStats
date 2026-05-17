@@ -1,5 +1,6 @@
 import type { Match } from '../types/match';
 import type { Tournament } from '../types/tournament';
+import type { TeamSimple } from '../types/user';
 
 const API_BASE = '/api';
 

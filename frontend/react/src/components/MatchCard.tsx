@@ -61,7 +61,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
       
       <div className="match-footer">
         <span className="game-time">
-          {isUpcoming ? `Starts at ${formatStartTime(match.startTime)}` : match.gameTime}
+          {isUpcoming ? `Starts at ${formatStartTime(match.startTime || '')}` : match.gameTime}
         </span>
       </div>
     </div>
