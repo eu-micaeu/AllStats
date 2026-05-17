@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Heart, Swords, Newspaper, Trophy, ChevronRight } from 'lucide-react';
+import { Heart, Swords, Trophy, ChevronRight } from 'lucide-react';
 import type { Match, GameType } from './types/match';
 import type { User } from './types/user';
 import { fetchMatches, fetchFavoriteMatches, fetchTournaments } from './services/api';
@@ -242,32 +242,6 @@ function App() {
             </div>
           </section>
         )}
-
-        {/* Section: Noticias */}
-        <section style={{ marginBottom: '4rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Newspaper size={18} color={getGameColor(game)} /> 
-            NEWS
-            <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '8px', padding: '1rem' }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-color)', marginBottom: '0.5rem' }}>BREAKING</div>
-              <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>New patch updates balance the current {game} meta.</p>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>2 hours ago</div>
-            </div>
-            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '8px', padding: '1rem' }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--valorant-color)', marginBottom: '0.5rem' }}>TRANSFER</div>
-              <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>Major roster changes announced ahead of next season.</p>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>5 hours ago</div>
-            </div>
-            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '8px', padding: '1rem' }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--live-color)', marginBottom: '0.5rem' }}>TOURNAMENT</div>
-              <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>Prize pool increased for upcoming world championship.</p>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>1 day ago</div>
-            </div>
-          </div>
-        </section>
 
         {/* Section: Torneios */}
         <section style={{ marginBottom: '4rem' }}>

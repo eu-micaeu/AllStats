@@ -21,19 +21,19 @@ const Header: React.FC<HeaderProps> = ({ user, onAuthClick, onLogout, currentPag
           
           <nav className="main-nav">
             <button 
-              className={`nav-link-btn ${currentPage === 'matches' ? 'active' : ''}`} 
+              className={`nav-link-btn ${currentPage === 'matches' ? 'active' : ''}`}
               onClick={() => onPageSelect('matches')}
             >
-              Matches
+              Live Matches
             </button>
             <button 
-              className={`nav-link-btn ${currentPage === 'tournaments' ? 'active' : ''}`} 
+              className={`nav-link-btn ${currentPage === 'tournaments' ? 'active' : ''}`}
               onClick={() => onPageSelect('tournaments')}
             >
               Tournaments
             </button>
-            <a href="#" className="nav-link">News</a>
           </nav>
+
         </div>
 
         <div className="header-right">
