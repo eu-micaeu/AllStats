@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -146,72 +145,23 @@ func main() {
 		c.JSON(http.StatusOK, brackets)
 	})
 
-	r.GET("/api/teams/search", func(c *gin.Context) {
-		query := c.Query("q")
-		if query == "" {
-			c.JSON(http.StatusOK, gin.H{"teams": []models.TeamSimple{}})
-			return
-		}
-		teams, err := psService.SearchTeams(query)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"teams": teams})
-	})
-
-	r.GET("/api/user/:id/favorites", func(c *gin.Context) {
+	// Auth Routes
+	r.POST("/api/user/:id/profile-picture", func(c *gin.Context) {
 		id := c.Param("id")
-		user, err := authService.GetUserByID(id)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-			return
+		var req struct {
+			PictureData string `json:"pictureData"`
 		}
-		c.JSON(http.StatusOK, gin.H{"favorites": user.FavoriteTeams})
-	})
-
-	r.POST("/api/user/:id/favorites", func(c *gin.Context) {
-		id := c.Param("id")
-		var favorites []models.TeamSimple
-		if err := c.ShouldBindJSON(&favorites); err != nil {
+		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if err := authService.UpdateFavoriteTeams(id, favorites); err != nil {
+		if err := authService.UpdateProfilePicture(id, req.PictureData); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "Favorites updated successfully"})
+		c.JSON(http.StatusOK, gin.H{"message": "Profile picture updated successfully"})
 	})
 
-	r.GET("/api/user/:id/favorite-matches", func(c *gin.Context) {
-		id := c.Param("id")
-		fmt.Printf("FavoriteMatches: Fetching for user ID: %s\n", id)
-		user, err := authService.GetUserByID(id)
-		if err != nil {
-			fmt.Printf("FavoriteMatches: User %s not found: %v\n", id, err)
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-			return
-		}
-
-		teamIDs := []string{}
-		for _, t := range user.FavoriteTeams {
-			teamIDs = append(teamIDs, t.ID)
-		}
-		fmt.Printf("FavoriteMatches: Found %d favorite teams for user %s: %v\n", len(teamIDs), id, teamIDs)
-
-		matches, err := psService.GetTeamsMatches(teamIDs)
-		if err != nil {
-			fmt.Printf("FavoriteMatches: Error fetching matches: %v\n", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		fmt.Printf("FavoriteMatches: Returning %d matches for user %s\n", len(matches), id)
-		c.JSON(http.StatusOK, gin.H{"matches": matches})
-	})
-
-	// Auth Routes
 	r.POST("/api/register", func(c *gin.Context) {
 		var req models.RegisterRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

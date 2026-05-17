@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Heart, Swords, Trophy, ChevronRight } from 'lucide-react';
+import { Swords, Trophy, ChevronRight } from 'lucide-react';
 import type { Match, GameType } from './types/match';
 import type { User } from './types/user';
-import { fetchMatches, fetchFavoriteMatches, fetchTournaments } from './services/api';
+import { fetchMatches, fetchTournaments } from './services/api';
 import { wsService } from './services/websocket';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -19,7 +19,6 @@ import MatchTooltip from './components/MatchTooltip';
 
 function App() {
   const [matches, setMatches] = useState<Match[]>([]);
-  const [favoriteMatches, setFavoriteMatches] = useState<Match[]>([]);
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +45,12 @@ function App() {
     const loadInitialData = async () => {
       console.log('App: Loading data for UID:', uid);
       try {
-        const [initialMatches, favMatches, initialTournaments] = await Promise.all([
+        const [initialMatches, initialTournaments] = await Promise.all([
           fetchMatches(),
-          uid ? fetchFavoriteMatches(uid) : Promise.resolve([]),
           fetchTournaments()
         ]);
         console.log('App: Data fetched successfully');
         setMatches(initialMatches);
-        setFavoriteMatches(favMatches);
         setTournaments(initialTournaments);
         setLoading(false);
       } catch (err) {
@@ -69,9 +66,6 @@ function App() {
       setMatches((prevMatches) => 
         prevMatches.map((m) => m.id === updatedMatch.id ? updatedMatch : m)
       );
-      setFavoriteMatches((prevFavs) =>
-        prevFavs.map((m) => m.id === updatedMatch.id ? updatedMatch : m)
-      );
     });
 
     return () => {
@@ -82,22 +76,12 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('user');
     setUser(null);
-    setFavoriteMatches([]);
     navigate('/');
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    const uid = updatedUser.id || (updatedUser as any)._id;
-    if (uid) {
-      try {
-        const favMatches = await fetchFavoriteMatches(uid);
-        setFavoriteMatches(favMatches);
-      } catch (err) {
-        console.error('App: Refresh favorites error:', err);
-      }
-    }
   };
 
   const getGameColor = (game: GameType) => {
@@ -154,40 +138,6 @@ function App() {
       <MatchTooltip match={m} />
     </div>
   );
-
-  const renderFavoriteMatches = () => {
-    if (!user || favoriteMatches.length === 0) return null;
-
-    const sortedFavs = [...favoriteMatches].sort((a, b) => {
-      if (a.status === 'live' && b.status !== 'live') return -1;
-      if (a.status !== 'live' && b.status === 'live') return 1;
-      return new Date(a.startTime || '').getTime() - new Date(b.startTime || '').getTime();
-    });
-
-    return (
-      <section style={{ marginBottom: '4rem' }}>
-        <h2 style={{ 
-          fontSize: '1rem', 
-          fontWeight: 800, 
-          marginBottom: '1.5rem', 
-          color: 'var(--text-primary)',
-          textTransform: 'uppercase',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Heart size={18} fill="var(--valorant-color)" color="var(--valorant-color)" />
-            <span>MY FAVORITES</span>
-          </div>
-          <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          {sortedFavs.map(m => renderMatchRow(m))}
-        </div>
-      </section>
-    );
-  };
 
   const renderGameSection = (game: GameType) => {
     const gameMatches = matches.filter(m => m.game === game);
@@ -305,7 +255,7 @@ function App() {
       <div className="container">
         <main>
           <Routes>
-            <Route path="/" element={<>{renderFavoriteMatches()}<GameFilter selectedGame={selectedGame} onGameSelect={setSelectedGame} />{renderGameSection(selectedGame)}</>} />
+            <Route path="/" element={<><GameFilter selectedGame={selectedGame} onGameSelect={setSelectedGame} />{renderGameSection(selectedGame)}</>} />
             <Route path="/tournaments" element={<TournamentPage onTournamentClick={(id) => navigate(`/tournaments/${id}`)} />} />
             <Route path="/tournaments/:id" element={<TournamentDetailWrapper onSeriesClick={(id, name) => navigate(`/series/${id}?name=${encodeURIComponent(name)}`)} />} />
             <Route path="/series/:id" element={<SeriesDetailWrapper />} />

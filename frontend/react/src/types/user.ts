@@ -9,5 +9,5 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  favoriteTeams?: TeamSimple[];
+  profilePicture?: string;
 }

@@ -309,49 +309,6 @@ func (s *PandaScoreService) GetTournamentBrackets(id string) (interface{}, error
 	return data, err
 }
 
-func (s *PandaScoreService) SearchTeams(query string) ([]models.TeamSimple, error) {
-	url := fmt.Sprintf("https://api.pandascore.co/teams?search[name]=%s&per_page=20", query)
-	
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Authorization", "Bearer "+s.token)
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
-	}
-
-	var batch []struct {
-		ID        int    `json:"id"`
-		Name      string `json:"name"`
-		ImageURL  string `json:"image_url"`
-		Videogame struct {
-			Name string `json:"name"`
-		} `json:"videogame"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&batch); err != nil {
-		return nil, err
-	}
-
-	teams := []models.TeamSimple{}
-	for _, pt := range batch {
-		teams = append(teams, models.TeamSimple{
-			ID:   fmt.Sprintf("%d", pt.ID),
-			Name: pt.Name,
-			Logo: pt.ImageURL,
-			Game: pt.Videogame.Name,
-		})
-	}
-	return teams, nil
-}
-
 func (s *PandaScoreService) getJson(url string) (interface{}, int, error) {
 	fmt.Printf("getJson: Fetching %s\n", url)
 	client := &http.Client{}

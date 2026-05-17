@@ -1,6 +1,5 @@
 import type { Match } from '../types/match';
 import type { Tournament } from '../types/tournament';
-import type { TeamSimple } from '../types/user';
 
 const API_BASE = '/api';
 
@@ -81,40 +80,13 @@ export const fetchSeriesStandings = async (id: string): Promise<any[]> => {
   return data.standings;
 };
 
-export const searchTeams = async (query: string): Promise<TeamSimple[]> => {
-  const response = await fetch(`${API_BASE}/teams/search?q=${encodeURIComponent(query)}`);
-  if (!response.ok) {
-    throw new Error('Failed to search teams');
-  }
-  const data = await response.json();
-  return data.teams;
-};
-
-export const fetchUserFavorites = async (userId: string): Promise<TeamSimple[]> => {
-  const response = await fetch(`${API_BASE}/user/${userId}/favorites`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch favorites');
-  }
-  const data = await response.json();
-  return data.favorites || [];
-};
-
-export const updateUserFavorites = async (userId: string, favorites: TeamSimple[]): Promise<void> => {
-  const response = await fetch(`${API_BASE}/user/${userId}/favorites`, {
+export const updateProfilePicture = async (userId: string, pictureData: string): Promise<void> => {
+  const response = await fetch(`${API_BASE}/user/${userId}/profile-picture`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(favorites)
+    body: JSON.stringify({ pictureData })
   });
   if (!response.ok) {
-    throw new Error('Failed to update favorites');
+    throw new Error('Failed to update profile picture');
   }
-};
-
-export const fetchFavoriteMatches = async (userId: string): Promise<Match[]> => {
-  const response = await fetch(`${API_BASE}/user/${userId}/favorite-matches`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch favorite matches');
-  }
-  const data = await response.json();
-  return data.matches;
 };

@@ -41,12 +41,19 @@ const Header: React.FC<HeaderProps> = ({ user, onAuthClick, onLogout, currentPag
             {user ? (
               <div className="user-profile" onClick={() => onPageSelect('profile')} style={{ cursor: 'pointer' }}>
                 <div className="user-info">
-                  <div className="user-avatar" style={{ border: currentPage === 'profile' ? '2px solid var(--accent-color)' : 'none' }}>
-                    {user.username.charAt(0).toUpperCase()}
+                  <div className="user-avatar" style={{ 
+                    border: currentPage === 'profile' ? '2px solid var(--accent-color)' : 'none',
+                    overflow: 'hidden'
+                  }}>
+                    {user.profilePicture ? (
+                      <img src={user.profilePicture} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      user.username.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div className="user-details">
                     <span className="username" style={{ color: currentPage === 'profile' ? 'white' : 'inherit' }}>{user.username}</span>
-                    <span className="user-status">Account & Favs</span>
+                    <span className="user-status">Manage Profile</span>
                   </div>
                 </div>
                 <button className="logout-btn-minimal" onClick={(e) => { e.stopPropagation(); onLogout(); }} title="Logout">

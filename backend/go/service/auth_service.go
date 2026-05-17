@@ -35,10 +35,9 @@ func (s *AuthService) Register(req models.RegisterRequest) error {
 	}
 
 	user := models.User{
-		Username:      req.Username,
-		Email:         req.Email,
-		Password:      string(hashedPassword),
-		FavoriteTeams: []models.TeamSimple{},
+		Username: req.Username,
+		Email:    req.Email,
+		Password: string(hashedPassword),
 	}
 
 	_, err = s.collection.InsertOne(context.Background(), user)
@@ -72,11 +71,10 @@ func (s *AuthService) GetUserByID(id string) (*models.User, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &user, nil
 }
 
-func (s *AuthService) UpdateFavoriteTeams(userID string, teams []models.TeamSimple) error {
+func (s *AuthService) UpdateProfilePicture(userID string, pictureData string) error {
 	objID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return err
@@ -85,7 +83,7 @@ func (s *AuthService) UpdateFavoriteTeams(userID string, teams []models.TeamSimp
 	_, err = s.collection.UpdateOne(
 		context.Background(),
 		bson.M{"_id": objID},
-		bson.M{"$set": bson.M{"favoriteTeams": teams}},
+		bson.M{"$set": bson.M{"profilePicture": pictureData}},
 	)
 	return err
 }

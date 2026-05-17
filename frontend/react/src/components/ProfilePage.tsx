@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, Search, Heart, Save } from 'lucide-react';
-import type { User, TeamSimple } from '../types/user';
-import type { GameType } from '../types/match';
-import { searchTeams, updateUserFavorites, fetchUserFavorites } from '../services/api';
+import React, { useState, useRef } from 'react';
+import { Camera, Save, Loader2 } from 'lucide-react';
+import type { User } from '../types/user';
+import { updateProfilePicture } from '../services/api';
 import '../styles/ProfilePage.css';
 
 interface ProfilePageProps {
@@ -11,63 +10,36 @@ interface ProfilePageProps {
 }
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ user, onUpdateUser }) => {
-  const [favorites, setFavorites] = useState<TeamSimple[]>(user.favoriteTeams || []);
-  const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
-  const [searchResults, setSearchResults] = useState<Record<string, TeamSimple[]>>({});
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<string | null>(user.profilePicture || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const games: GameType[] = ['Counter-Strike 2', 'Valorant', 'League of Legends'];
-
-  useEffect(() => {
-    const loadFavorites = async () => {
-      try {
-        const favs = await fetchUserFavorites(user.id);
-        setFavorites(favs);
-      } catch (err) {
-        console.error('Failed to load favorites', err);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit for base64
+        alert('Image too large. Please select an image under 1MB.');
+        return;
       }
-    };
-    loadFavorites();
-  }, [user.id]);
-
-  const handleSearch = async (game: string, query: string) => {
-    setSearchQueries(prev => ({ ...prev, [game]: query }));
-    
-    if (query.length < 2) {
-      setSearchResults(prev => ({ ...prev, [game]: [] }));
-      return;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-
-    try {
-      const results = await searchTeams(query);
-      // Filter results for the specific game if possible, though PandaScore search is broad
-      setSearchResults(prev => ({ ...prev, [game]: results }));
-    } catch (err) {
-      console.error('Search failed', err);
-    }
-  };
-
-  const selectTeam = (game: string, team: TeamSimple) => {
-    const newFavs = favorites.filter(f => f.game !== game);
-    newFavs.push({ ...team, game });
-    setFavorites(newFavs);
-    setSearchQueries(prev => ({ ...prev, [game]: '' }));
-    setSearchResults(prev => ({ ...prev, [game]: [] }));
-  };
-
-  const removeTeam = (game: string) => {
-    setFavorites(favorites.filter(f => f.game !== game));
   };
 
   const handleSave = async () => {
+    if (!preview || preview === user.profilePicture) return;
+    
     setSaving(true);
     try {
-      await updateUserFavorites(user.id, favorites);
-      onUpdateUser({ ...user, favoriteTeams: favorites });
-      alert('Favorites updated successfully!');
+      await updateProfilePicture(user.id, preview);
+      onUpdateUser({ ...user, profilePicture: preview });
+      alert('Profile picture updated successfully!');
     } catch (err) {
-      console.error('Save failed', err);
-      alert('Failed to save favorites.');
+      console.error('Failed to update profile picture', err);
+      alert('Failed to update profile picture.');
     } finally {
       setSaving(false);
     }
@@ -77,8 +49,28 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onUpdateUser }) => {
     <div className="profile-page">
       <div className="profile-card">
         <div className="profile-header">
-          <div className="profile-avatar">
-            {user.username.charAt(0).toUpperCase()}
+          <div className="profile-avatar-container">
+            <div className="profile-avatar-large">
+              {preview ? (
+                <img src={preview} alt="Profile" className="avatar-img" />
+              ) : (
+                user.username.charAt(0).toUpperCase()
+              )}
+            </div>
+            <button 
+              className="change-avatar-btn" 
+              onClick={() => fileInputRef.current?.click()}
+              title="Change Profile Picture"
+            >
+              <Camera size={20} />
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+            />
           </div>
           <div className="profile-info">
             <h1>{user.username}</h1>
@@ -87,82 +79,32 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onUpdateUser }) => {
         </div>
       </div>
 
-      <div className="favorites-section">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <Heart className="heart-icon" style={{ color: 'var(--valorant-color)' }} fill="var(--valorant-color)" />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>FAVORITE TEAMS</h2>
-        </div>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Choose one team for each game to highlight their matches.</p>
-
-        <div className="favorites-grid">
-          {games.map(game => {
-            const favorite = favorites.find(f => f.game === game);
-            
-            return (
-              <div key={game} className={`favorite-slot ${favorite ? 'active' : ''}`}>
-                <div className="game-label-large">{game}</div>
-                
-                {favorite ? (
-                  <div className="team-selection-area">
-                    <div className="selected-team-info">
-                      {favorite.logo ? (
-                        <img src={favorite.logo} alt="" className="selected-team-logo" />
-                      ) : (
-                        <div className="selected-team-logo" style={{fontSize: '1.2rem'}}>🛡️</div>
-                      )}
-                      <span className="selected-team-name">{favorite.name}</span>
-                    </div>
-                    <button className="remove-btn" onClick={() => removeTeam(game)}>
-                      <X size={18} />
-                    </button>
-                  </div>
+      <div className="profile-content">
+        <div className="settings-section">
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.5rem', color: 'white' }}>ACCOUNT SETTINGS</h2>
+          
+          <div className="setting-item">
+            <div className="setting-label">Profile Picture</div>
+            <div className="setting-action">
+              <button 
+                className={`save-btn ${!preview || preview === user.profilePicture ? 'disabled' : ''}`}
+                onClick={handleSave}
+                disabled={saving || !preview || preview === user.profilePicture}
+              >
+                {saving ? (
+                  <><Loader2 size={18} className="animate-spin" /> Saving...</>
                 ) : (
-                  <div className="search-teams-box">
-                    <div style={{ position: 'relative' }}>
-                      <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                      <input
-                        type="text"
-                        placeholder="Search team..."
-                        className="team-search-input"
-                        style={{ paddingLeft: '2.5rem' }}
-                        value={searchQueries[game] || ''}
-                        onChange={(e) => handleSearch(game, e.target.value)}
-                      />
-                    </div>
-                    
-                    {searchResults[game] && searchResults[game].length > 0 && (
-                      <div className="search-results-dropdown">
-                        {searchResults[game].map(team => (
-                          <div key={team.id} className="search-result-item" onClick={() => selectTeam(game, team)}>
-                            {team.logo ? (
-                              <img src={team.logo} alt="" className="search-result-logo" />
-                            ) : (
-                              <div className="search-result-logo" style={{fontSize: '1rem'}}>🛡️</div>
-                            )}
-                            <span className="search-result-name">{team.name}</span>
-                            <span className="search-result-game">{team.game}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <><Save size={18} /> Save Photo</>
                 )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="save-section">
-          <button 
-            className="save-btn" 
-            onClick={handleSave}
-            disabled={saving}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Save size={18} />
-              {saving ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
-          </button>
+          </div>
+
+          <div className="settings-placeholder" style={{ marginTop: '2rem', padding: '2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              More profile management features (change password, email preferences) coming soon.
+            </p>
+          </div>
         </div>
       </div>
     </div>
