@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { Swords, Trophy, ChevronRight } from 'lucide-react';
 import type { Match, GameType } from './types/match';
 import type { User } from './types/user';
@@ -9,13 +9,12 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import GameFilter from './components/GameFilter';
+import MatchCard from './components/MatchCard';
 import TournamentPage from './components/TournamentPage';
 import TournamentDetail from './components/TournamentDetail';
 import SeriesDetail from './components/SeriesDetail';
 import ProfilePage from './components/ProfilePage';
 import './styles/theme.css';
-
-import MatchTooltip from './components/MatchTooltip';
 
 function App() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -34,7 +33,6 @@ function App() {
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
-        console.log('App: Stored user found:', parsed);
         setUser(parsed);
         uid = parsed.id || (parsed as any)._id || '';
       } catch (e) {
@@ -43,13 +41,11 @@ function App() {
     }
 
     const loadInitialData = async () => {
-      console.log('App: Loading data for UID:', uid);
       try {
         const [initialMatches, initialTournaments] = await Promise.all([
           fetchMatches(),
           fetchTournaments()
         ]);
-        console.log('App: Data fetched successfully');
         setMatches(initialMatches);
         setTournaments(initialTournaments);
         setLoading(false);
@@ -93,56 +89,9 @@ function App() {
     }
   };
 
-  const renderMatchRow = (m: Match) => (
-    <div key={m.id} className="match-row" style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      padding: '0.6rem 1rem', 
-      background: 'rgba(255,255,255,0.01)', 
-      borderRadius: '6px', 
-      border: '1px solid rgba(255,255,255,0.02)', 
-      fontSize: '0.85rem' 
-    }}>
-      <div style={{ width: '100px', color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600 }}>
-        {m.startTime ? new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (m.status === 'live' ? 'LIVE' : '--:--')}
-      </div>
-      
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, justifyContent: 'center' }}>
-        <div style={{ flex: 1, textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {m.teamA.name}
-        </div>
-        
-        <div style={{ 
-          background: 'rgba(255,255,255,0.04)', 
-          padding: '0.2rem 0.6rem', 
-          borderRadius: '4px', 
-          fontWeight: 900, 
-          minWidth: '55px', 
-          textAlign: 'center',
-          color: m.status === 'live' ? 'var(--live-color)' : 'inherit'
-        }}>
-          {m.status === 'live' ? (
-            <span style={{ fontSize: '0.75rem' }}>{m.teamA.score} - {m.teamB.score}</span>
-          ) : m.status === 'upcoming' ? 'VS' : `${m.teamA.score} - ${m.teamB.score}`}
-        </div>
-        <div style={{ flex: 1, textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {m.teamB.name}
-        </div>
-      </div>
-
-      <div style={{ width: '120px', textAlign: 'right', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', lineHeight: 1.2 }}>
-        <div style={{ fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.leagueName}</div>
-        <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>{m.stage || 'Match'}</div>
-      </div>
-
-      <MatchTooltip match={m} />
-    </div>
-  );
-
   const renderGameSection = (game: GameType) => {
     const gameMatches = matches.filter(m => m.game === game);
     
-    // Partidas: Live and Upcoming
     const activeMatches = gameMatches.filter(m => m.status === 'live' || m.status === 'upcoming');
     const sortedActive = [...activeMatches].sort((a, b) => {
       if (a.status === 'live' && b.status !== 'live') return -1;
@@ -150,7 +99,6 @@ function App() {
       return new Date(a.startTime || '').getTime() - new Date(b.startTime || '').getTime();
     });
 
-    // Resultados: Last 5 finished
     const finishedMatches = gameMatches.filter(m => m.status === 'finished');
     const sortedFinished = [...finishedMatches].sort((a, b) => 
       new Date(b.startTime || '').getTime() - new Date(a.startTime || '').getTime()
@@ -163,7 +111,6 @@ function App() {
     
     return (
       <div key={game} className="game-view-container">
-        {/* Section: Partidas */}
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Swords size={18} color={getGameColor(game)} /> 
@@ -172,14 +119,13 @@ function App() {
           </h2>
           {displayMatches.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {displayMatches.map((m) => renderMatchRow(m))}
+              {displayMatches.map((m) => <MatchCard key={m.id} match={m} />)}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No active matches found.</div>
           )}
         </section>
 
-        {/* Section: Resultados */}
         {displayResults.length > 0 && (
           <section style={{ marginBottom: '4rem' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -188,12 +134,11 @@ function App() {
               <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {displayResults.map((m) => renderMatchRow(m))}
+              {displayResults.map((m) => <MatchCard key={m.id} match={m} />)}
             </div>
           </section>
         )}
 
-        {/* Section: Torneios */}
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Trophy size={18} color={getGameColor(game)} /> 
@@ -269,12 +214,12 @@ function App() {
   );
 }
 
-import { useParams, useSearchParams } from 'react-router-dom';
 const TournamentDetailWrapper: React.FC<{ onSeriesClick: (id: string, name: string) => void }> = ({ onSeriesClick }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   return <TournamentDetail tournamentId={id!} onBack={() => navigate('/tournaments')} onSeriesClick={onSeriesClick} />;
 };
+
 const SeriesDetailWrapper: React.FC = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
