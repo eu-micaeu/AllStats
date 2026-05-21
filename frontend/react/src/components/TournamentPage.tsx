@@ -15,6 +15,7 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick, user
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmedSearch, setConfirmedSearch] = useState('');
 
   useEffect(() => {
     const loadTournaments = async () => {
@@ -30,10 +31,20 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick, user
     loadTournaments();
   }, []);
 
+  const handleSearch = () => {
+    setConfirmedSearch(searchTerm);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const filteredTournaments = tournaments.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.league.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.game.toLowerCase().includes(searchTerm.toLowerCase())
+    t.name.toLowerCase().includes(confirmedSearch.toLowerCase()) ||
+    t.league.toLowerCase().includes(confirmedSearch.toLowerCase()) ||
+    t.game.toLowerCase().includes(confirmedSearch.toLowerCase())
   );
 
   const getGameColor = (game: string) => {
@@ -58,11 +69,35 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick, user
             className="search-input"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
+          <button 
+            className="search-confirm-btn"
+            onClick={handleSearch}
+            style={{
+              background: 'var(--accent-color)',
+              border: 'none',
+              color: 'white',
+              padding: '0.5rem 1.25rem',
+              borderRadius: '6px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              marginLeft: '0.5rem',
+              transition: 'all 0.2s',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}
+          >
+            Search
+          </button>
           {searchTerm && (
             <button 
               className="clear-search" 
-              onClick={() => setSearchTerm('')}
+              onClick={() => {
+                setSearchTerm('');
+                setConfirmedSearch('');
+              }}
               aria-label="Clear search"
             >
               ×
@@ -70,9 +105,9 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick, user
           )}
         </div>
         <div className="search-meta">
-          {searchTerm && (
+          {confirmedSearch && (
             <span className="results-count">
-              Found {filteredTournaments.length} {filteredTournaments.length === 1 ? 'tournament' : 'tournaments'}
+              Found {filteredTournaments.length} {filteredTournaments.length === 1 ? 'tournament' : 'tournaments'} for "{confirmedSearch}"
             </span>
           )}
         </div>
@@ -117,7 +152,6 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick, user
           ))
         ) : (
           <div className="no-results">
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
             No tournaments found matching your search.
           </div>
         )}

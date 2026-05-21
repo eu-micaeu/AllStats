@@ -188,7 +188,7 @@ function App() {
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Trophy size={18} color={getGameColor(game)} /> 
-            TOURNAMENTS
+            LIVE TOURNAMENTS
             <span style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)', marginLeft: '1rem' }}></span>
           </h2>
           {tournaments.filter(t => t.game === game && (t.status === 'live' || t.status === 'upcoming')).length > 0 ? (
