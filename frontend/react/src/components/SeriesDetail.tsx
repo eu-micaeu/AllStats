@@ -7,8 +7,6 @@ import {
   fetchTournamentStandings,
   fetchTournamentBrackets
 } from '../services/api';
-import MatchTooltip from './MatchTooltip';
-import type { Match } from '../types/match';
 import '../styles/SeriesDetail.css';
 
 interface SeriesDetailProps {
@@ -116,7 +114,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
     );
   };
 
-  const renderBracket = (bracketMatches: any[], seriesGame?: string) => {
+  const renderBracket = (bracketMatches: any[]) => {
     if (!Array.isArray(bracketMatches)) {
       return (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
@@ -130,53 +128,58 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
       new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
     );
 
-    // Group matches by round name
-    const roundsMap = sortedMatches.reduce((acc: any, m: any) => {
+    // Categories
+    const upperRoundsMap: any = {};
+    const lowerRoundsMap: any = {};
+    const grandFinalMatches: any[] = [];
+
+    sortedMatches.forEach((m: any) => {
       const name = m.name.toLowerCase();
-      let roundName = '';
-
-      // Prioritize identifying Lower Bracket to separate from Upper Bracket
       const isLower = name.includes('lower') || name.includes('losers');
-      const isUpper = name.includes('upper') || name.includes('winners');
+      const isGrandFinal = name.includes('grand final');
+      
+      if (isGrandFinal) {
+        grandFinalMatches.push(m);
+        return;
+      }
 
-      if (name.includes('grand final')) roundName = 'Grand Final';
-      else if (name.includes('final') && isLower) roundName = 'LB Final';
-      else if (name.includes('final') && isUpper) roundName = 'UB Final';
-      else if (name.includes('final')) roundName = 'Final';
+      let roundName = '';
+      if (name.includes('final') && isLower) roundName = 'LB Final';
+      else if (name.includes('final')) roundName = 'UB Final';
       else if (name.includes('semifinal') || name.includes('semi-final')) {
-        roundName = isLower ? 'LB Semifinals' : (isUpper ? 'UB Semifinals' : 'Semifinals');
+        roundName = isLower ? 'LB Semifinals' : 'UB Semifinals';
       }
       else if (name.includes('quarterfinal') || name.includes('quarter-final')) {
-        roundName = isLower ? 'LB Quarterfinals' : (isUpper ? 'UB Quarterfinals' : 'Quarterfinals');
+        roundName = isLower ? 'LB Quarterfinals' : 'UB Quarterfinals';
       }
       else if (name.includes('round 1')) roundName = isLower ? 'LB Round 1' : 'Round 1';
       else if (name.includes('round 2')) roundName = isLower ? 'LB Round 2' : 'Round 2';
       else if (name.includes('round 3')) roundName = isLower ? 'LB Round 3' : 'Round 3';
       else if (name.includes('round 4')) roundName = isLower ? 'LB Round 4' : 'Round 4';
       else {
-        // Fallback: extract the first part before the colon
         roundName = m.name.split(':')[0] || 'Bracket';
       }
 
-      if (!acc[roundName]) acc[roundName] = [];
-      acc[roundName].push(m);
-      return acc;
-    }, {});
+      const targetMap = isLower ? lowerRoundsMap : upperRoundsMap;
+      if (!targetMap[roundName]) targetMap[roundName] = [];
+      targetMap[roundName].push(m);
+    });
 
-    // Logical order for round columns - progressive flow
-    const roundOrder = [
-      'Round 1', 'LB Round 1', 
-      'Round 2', 'LB Round 2', 
-      'Quarterfinals', 'UB Quarterfinals', 'LB Quarterfinals', 
-      'LB Round 3', 
-      'Semifinals', 'UB Semifinals', 'LB Semifinals', 
-      'LB Round 4', 
-      'UB Final', 'LB Final', 
-      'Final', 'Grand Final'
-    ];
-    const sortedRounds = Object.keys(roundsMap).sort((a, b) => {
-      const idxA = roundOrder.indexOf(a);
-      const idxB = roundOrder.indexOf(b);
+    const upperOrder = ['Round 1', 'Round 2', 'UB Quarterfinals', 'UB Semifinals', 'UB Final'];
+    const lowerOrder = ['LB Round 1', 'LB Round 2', 'LB Round 3', 'LB Round 4', 'LB Quarterfinals', 'LB Semifinals', 'LB Final'];
+
+    const sortedUpperRounds = Object.keys(upperRoundsMap).sort((a, b) => {
+      const idxA = upperOrder.indexOf(a);
+      const idxB = upperOrder.indexOf(b);
+      if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    });
+
+    const sortedLowerRounds = Object.keys(lowerRoundsMap).sort((a, b) => {
+      const idxA = lowerOrder.indexOf(a);
+      const idxB = lowerOrder.indexOf(b);
       if (idxA === -1 && idxB === -1) return a.localeCompare(b);
       if (idxA === -1) return 1;
       if (idxB === -1) return -1;
@@ -189,132 +192,117 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
       return result ? result.score : 0;
     };
 
-    return (
-      <div className="bracket-container" style={{ paddingBottom: '2rem', width: '100%' }}>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', width: '100%' }}>
-          {sortedRounds.map((roundName) => (
-            <div key={roundName} style={{ flex: 1, minWidth: '0' }}>
-              <h4 style={{ 
-                fontSize: '0.6rem', 
-                textTransform: 'uppercase', 
-                color: 'var(--text-secondary)', 
-                marginBottom: '1rem', 
-                textAlign: 'center', 
-                fontWeight: 800,
-                letterSpacing: '0.05em'
-              }}>
-                {roundName}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'space-around', height: 'calc(100% - 2rem)' }}>
-                {roundsMap[roundName].map((m: any) => {
-                  const teamA = m.opponents[0]?.opponent;
-                  const teamB = m.opponents[1]?.opponent;
-                  const scoreA = getScore(m, teamA?.id);
-                  const scoreB = getScore(m, teamB?.id);
-                  const isFinished = m.status === 'finished';
-                  const winnerId = m.winner_id;
+    const renderMatch = (m: any) => {
+      const teamA = m.opponents[0]?.opponent;
+      const teamB = m.opponents[1]?.opponent;
+      const scoreA = getScore(m, teamA?.id);
+      const scoreB = getScore(m, teamB?.id);
+      const isFinished = m.status === 'finished';
+      const winnerId = m.winner_id;
 
-                  const getDisplayName = (t: any) => t?.acronym || (t?.name ? (t.name.length > 8 ? t.name.substring(0, 5) + '..' : t.name) : 'TBD');
+      const getDisplayName = (t: any) => t?.acronym || (t?.name ? (t.name.length > 8 ? t.name.substring(0, 5) + '..' : t.name) : 'TBD');
+      const isLive = m.status === 'live' || m.status === 'running';
 
-                  const isLive = m.status === 'live' || m.status === 'running';
-
-                  const mappedMatch: Match = {
-                    id: String(m.id),
-                    game: (seriesGame || m.videogame?.name || 'Counter-Strike 2') as any,
-                    status: isLive ? 'live' : (m.status === 'not_started' || m.status === 'upcoming' ? 'upcoming' : 'finished'),
-                    teamA: {
-                      id: String(teamA?.id || ''),
-                      name: teamA?.name || 'TBD',
-                      logo: teamA?.image_url || '',
-                      score: scoreA
-                    },
-                    teamB: {
-                      id: String(teamB?.id || ''),
-                      name: teamB?.name || 'TBD',
-                      logo: teamB?.image_url || '',
-                      score: scoreB
-                    },
-                    startTime: m.scheduled_at,
-                    stage: m.name,
-                    numberOfGames: m.number_of_games,
-                    gameTime: '',
-                  };
-
-                  return (
-                    <div key={m.id} className="match-row" style={{ 
-                      background: 'var(--card-bg)', 
-                      border: isLive ? '1px solid var(--live-color)' : '1px solid rgba(255,255,255,0.05)', 
-                      borderRadius: '4px',
-                      overflow: 'visible', // Changed from hidden to allow tooltip visibility
-                      boxShadow: isLive ? '0 0 10px rgba(34, 197, 94, 0.2)' : 'none',
-                      position: 'relative'
-                    }}>
-                      {isLive && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '0',
-                          right: '0',
-                          background: 'var(--live-color)',
-                          color: 'white',
-                          fontSize: '0.45rem',
-                          fontWeight: 900,
-                          padding: '0.1rem 0.3rem',
-                          borderBottomLeftRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.2rem',
-                          zIndex: 2
-                        }}>
-                          <div className="pulse" style={{ width: '4px', height: '4px', background: 'white' }} />
-                          LIVE
-                        </div>
-                      )}
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        padding: '0.4rem 0.5rem',
-                        background: winnerId === teamA?.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-                        opacity: isFinished && winnerId !== teamA?.id ? 0.4 : 1,
-                        borderBottom: '1px solid rgba(255,255,255,0.02)'
-                      }}>
-                        <span style={{ fontWeight: 800, fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {getDisplayName(teamA)}
-                        </span>
-                        <span style={{ fontWeight: 900, fontSize: '0.75rem', color: winnerId === teamA?.id ? 'var(--accent-color)' : 'white' }}>{scoreA}</span>
-                      </div>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        padding: '0.4rem 0.5rem',
-                        background: winnerId === teamB?.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-                        opacity: isFinished && winnerId !== teamB?.id ? 0.4 : 1
-                      }}>
-                        <span style={{ fontWeight: 800, fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {getDisplayName(teamB)}
-                        </span>
-                        <span style={{ fontWeight: 900, fontSize: '0.75rem', color: winnerId === teamB?.id ? 'var(--accent-color)' : 'white' }}>{scoreB}</span>
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.5rem', 
-                        color: 'var(--text-secondary)', 
-                        textAlign: 'center', 
-                        padding: '0.2rem 0',
-                        borderTop: '1px solid rgba(255,255,255,0.02)',
-                        background: 'rgba(0,0,0,0.1)',
-                        fontWeight: 600
-                      }}>
-                        {new Date(m.scheduled_at).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                      <MatchTooltip match={mappedMatch} />
-                    </div>
-                  );
-                })}
-              </div>
+      return (
+        <div key={m.id} className="match-row" style={{ 
+          background: 'var(--card-bg)', 
+          border: isLive ? '1px solid var(--live-color)' : '1px solid rgba(255,255,255,0.05)', 
+          borderRadius: '4px',
+          overflow: 'visible',
+          boxShadow: isLive ? '0 0 10px rgba(34, 197, 94, 0.2)' : 'none',
+          position: 'relative',
+          minWidth: '140px'
+        }}>
+          {isLive && (
+            <div style={{
+              position: 'absolute', top: '0', right: '0', background: 'var(--live-color)', color: 'white',
+              fontSize: '0.45rem', fontWeight: 900, padding: '0.1rem 0.3rem', borderBottomLeftRadius: '4px',
+              display: 'flex', alignItems: 'center', gap: '0.2rem', zIndex: 2
+            }}>
+              <div className="pulse" style={{ width: '4px', height: '4px', background: 'white' }} />
+              LIVE
             </div>
-          ))}
+          )}
+          <div style={{ 
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.5rem',
+            background: winnerId === teamA?.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+            opacity: isFinished && winnerId !== teamA?.id ? 0.4 : 1, borderBottom: '1px solid rgba(255,255,255,0.02)'
+          }}>
+            <span style={{ fontWeight: 800, fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {getDisplayName(teamA)}
+            </span>
+            <span style={{ fontWeight: 900, fontSize: '0.75rem', color: winnerId === teamA?.id ? 'var(--accent-color)' : 'white' }}>{scoreA}</span>
+          </div>
+          <div style={{ 
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.5rem',
+            background: winnerId === teamB?.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+            opacity: isFinished && winnerId !== teamB?.id ? 0.4 : 1
+          }}>
+            <span style={{ fontWeight: 800, fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {getDisplayName(teamB)}
+            </span>
+            <span style={{ fontWeight: 900, fontSize: '0.75rem', color: winnerId === teamB?.id ? 'var(--accent-color)' : 'white' }}>{scoreB}</span>
+          </div>
+          <div style={{ 
+            fontSize: '0.5rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '0.2rem 0',
+            borderTop: '1px solid rgba(255,255,255,0.02)', background: 'rgba(0,0,0,0.1)', fontWeight: 600
+          }}>
+            {new Date(m.scheduled_at).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+          </div>
+          
         </div>
+      );
+    };
+
+    return (
+      <div className="bracket-container" style={{ display: 'flex', flexDirection: 'column', gap: '3rem', width: '100%' }}>
+        {/* Upper Bracket */}
+        {sortedUpperRounds.length > 0 && (
+          <div className="bracket-section">
+            <h4 style={{ color: 'var(--accent-color)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              Upper Bracket <span style={{ flex: 1, height: '1px', background: 'rgba(59, 130, 246, 0.2)' }}></span>
+            </h4>
+            <div style={{ display: 'flex', gap: '1.5rem', overflowX: 'auto', paddingBottom: '1rem' }}>
+              {sortedUpperRounds.map((roundName) => (
+                <div key={roundName} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 160px' }}>
+                  <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center' }}>{roundName}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', height: '100%' }}>
+                    {upperRoundsMap[roundName].map((m: any) => renderMatch(m))}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Grand Final in same flow if exists and is logical */}
+              {grandFinalMatches.length > 0 && (
+                <div key="grand-final" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 160px' }}>
+                  <div style={{ fontSize: '0.55rem', color: 'var(--accent-color)', fontWeight: 900, textTransform: 'uppercase', textAlign: 'center' }}>Grand Final</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', height: '100%' }}>
+                    {grandFinalMatches.map((m: any) => renderMatch(m))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Lower Bracket */}
+        {sortedLowerRounds.length > 0 && (
+          <div className="bracket-section">
+            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              Lower Bracket <span style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.05)' }}></span>
+            </h4>
+            <div style={{ display: 'flex', gap: '1.5rem', overflowX: 'auto', paddingBottom: '1rem' }}>
+              {sortedLowerRounds.map((roundName) => (
+                <div key={roundName} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 160px' }}>
+                  <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center' }}>{roundName}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', height: '100%' }}>
+                    {lowerRoundsMap[roundName].map((m: any) => renderMatch(m))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -388,7 +376,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                       <div style={{ width: '100px', textAlign: 'right', fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         {m.leagueName}
                       </div>
-                      <MatchTooltip match={m as Match} />
+                      
                     </div>
                   ))}
                 </div>
@@ -434,7 +422,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '2rem', color: 'white', textTransform: 'uppercase', borderLeft: '4px solid var(--accent-color)', paddingLeft: '1rem' }}>
                   {t.name}
                 </h3>
-                {data.type === 'bracket' ? renderBracket(data.data, seriesInfo?.videogame?.name) : renderStandings(data.data)}
+                {data.type === 'bracket' ? renderBracket(data.data) : renderStandings(data.data)}
               </div>
             );
           })}

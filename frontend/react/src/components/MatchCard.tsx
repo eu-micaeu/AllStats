@@ -1,6 +1,5 @@
 import React from 'react';
 import type { Match } from '../types/match';
-import MatchTooltip from './MatchTooltip';
 import '../styles/MatchCard.css';
 
 interface MatchCardProps {
@@ -57,7 +56,6 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
         </div>
       </div>
 
-      <MatchTooltip match={match} />
     </div>
   );
 };

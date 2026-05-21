@@ -29,7 +29,6 @@ function App() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    let uid = '';
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
@@ -39,7 +38,6 @@ function App() {
           favoriteTournaments: parsed.favoriteTournaments || []
         };
         setUser(normalizedUser);
-        uid = normalizedUser.id;
       } catch (e) {
         localStorage.removeItem('user');
       }
@@ -280,7 +278,7 @@ function App() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                       {tournaments
                         .filter(t => user.favoriteTournaments?.map(String).includes(String(t.id)))
-                        .sort((a, b) => (a.status === 'live' ? -1 : 1))
+                        .sort((a) => (a.status === 'live' ? -1 : 1))
                         .map(league => (
                           <div key={league.id} style={{ 
                             display: 'flex', 
