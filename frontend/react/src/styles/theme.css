@@ -351,9 +351,8 @@ h1, h2, h3, h4, .logo-text, .nav-link, .nav-link-btn, .auth-btn, .game-label, .s
   display: flex;
   justify-content: center;
   gap: 3rem;
-  margin-bottom: 4rem;
+  margin-bottom: 1rem;
   padding-bottom: 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .game-filter-btn {

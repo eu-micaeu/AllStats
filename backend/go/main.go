@@ -162,6 +162,26 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "Profile picture updated successfully"})
 	})
 
+	r.POST("/api/user/:id/favorites/:tournamentId", func(c *gin.Context) {
+		userID := c.Param("id")
+		tournamentID := c.Param("tournamentId")
+		if err := authService.AddFavoriteTournament(userID, tournamentID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Tournament favorited"})
+	})
+
+	r.DELETE("/api/user/:id/favorites/:tournamentId", func(c *gin.Context) {
+		userID := c.Param("id")
+		tournamentID := c.Param("tournamentId")
+		if err := authService.RemoveFavoriteTournament(userID, tournamentID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Tournament removed from favorites"})
+	})
+
 	r.POST("/api/register", func(c *gin.Context) {
 		var req models.RegisterRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

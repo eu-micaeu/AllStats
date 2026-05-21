@@ -90,3 +90,21 @@ export const updateProfilePicture = async (userId: string, pictureData: string):
     throw new Error('Failed to update profile picture');
   }
 };
+
+export const addFavoriteTournament = async (userId: string, tournamentId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE}/user/${userId}/favorites/${tournamentId}`, {
+    method: 'POST'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to favorite tournament');
+  }
+};
+
+export const removeFavoriteTournament = async (userId: string, tournamentId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE}/user/${userId}/favorites/${tournamentId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to remove favorite');
+  }
+};

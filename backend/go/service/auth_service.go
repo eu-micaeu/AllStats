@@ -57,6 +57,11 @@ func (s *AuthService) Login(req models.LoginRequest) (*models.User, error) {
 		return nil, errors.New("invalid email or password")
 	}
 
+	// Initialize favoriteTournaments if nil to avoid frontend issues
+	if user.FavoriteTournaments == nil {
+		user.FavoriteTournaments = []string{}
+	}
+
 	return &user, nil
 }
 
@@ -84,6 +89,34 @@ func (s *AuthService) UpdateProfilePicture(userID string, pictureData string) er
 		context.Background(),
 		bson.M{"_id": objID},
 		bson.M{"$set": bson.M{"profilePicture": pictureData}},
+	)
+	return err
+}
+
+func (s *AuthService) AddFavoriteTournament(userID string, tournamentID string) error {
+	objID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objID},
+		bson.M{"$addToSet": bson.M{"favoriteTournaments": tournamentID}},
+	)
+	return err
+}
+
+func (s *AuthService) RemoveFavoriteTournament(userID string, tournamentID string) error {
+	objID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objID},
+		bson.M{"$pull": bson.M{"favoriteTournaments": tournamentID}},
 	)
 	return err
 }

@@ -8,6 +8,7 @@ type User struct {
 	Email          string        `bson:"email" json:"email"`
 	Password       string        `bson:"password" json:"password"`
 	ProfilePicture string        `bson:"profilePicture" json:"profilePicture"`
+	FavoriteTournaments []string `bson:"favoriteTournaments,omitempty" json:"favoriteTournaments"`
 }
 
 type LoginRequest struct {

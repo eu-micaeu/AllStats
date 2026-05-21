@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Star } from 'lucide-react';
 import type { Tournament } from '../types/tournament';
+import type { User } from '../types/user';
 import { fetchTournaments } from '../services/api';
 import '../styles/TournamentPage.css';
 
 interface TournamentPageProps {
   onTournamentClick: (id: string) => void;
+  user: User | null;
+  onToggleFavorite: (e: React.MouseEvent, id: string) => void;
 }
 
-const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick }) => {
+const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick, user, onToggleFavorite }) => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,7 +93,26 @@ const TournamentPage: React.FC<TournamentPageProps> = ({ onTournamentClick }) =>
               >
                 {tournament.game}
               </span>
-              <h3 className="tournament-name">{tournament.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
+                <h3 className="tournament-name" style={{ margin: 0, flex: 1 }}>{tournament.name}</h3>
+                {user && (
+                  <button 
+                    onClick={(e) => onToggleFavorite(e, tournament.id)}
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      padding: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: user.favoriteTournaments?.includes(tournament.id) ? '#fbbf24' : 'var(--text-secondary)',
+                      zIndex: 2
+                    }}
+                  >
+                    <Star size={18} fill={user.favoriteTournaments?.includes(tournament.id) ? '#fbbf24' : 'none'} />
+                  </button>
+                )}
+              </div>
             </div>
           ))
         ) : (
