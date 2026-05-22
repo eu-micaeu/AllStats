@@ -1,5 +1,6 @@
 import type { Match } from '../types/match';
 import type { Tournament } from '../types/tournament';
+import type { User } from '../types/user';
 
 const API_BASE = '/api';
 
@@ -108,3 +109,33 @@ export const removeFavoriteTournament = async (userId: string, tournamentId: str
     throw new Error('Failed to remove favorite');
   }
 };
+
+export const deleteAccount = async (userId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE}/user/${userId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete account');
+  }
+};
+
+export interface UpdateProfileData {
+  username?: string;
+  email?: string;
+  password?: string;
+}
+
+export const updateProfile = async (userId: string, data: UpdateProfileData): Promise<User> => {
+  const response = await fetch(`${API_BASE}/user/${userId}/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to update profile');
+  }
+  const result = await response.json();
+  return result.user;
+};
+

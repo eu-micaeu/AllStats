@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -54,12 +55,11 @@ func (s *PandaScoreService) GetSeriesTeams(id string) ([]models.TeamDetail, erro
 	fmt.Printf("GetSeriesTeams: Fetching series %s to find tournaments...\n", id)
 	
 	seriesUrl := fmt.Sprintf("https://api.pandascore.co/series/%s", id)
-	client := &http.Client{}
 	req, _ := http.NewRequest("GET", seriesUrl, nil)
 	req.Header.Set("Authorization", "Bearer "+s.token)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := s.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *PandaScoreService) GetSeriesTeams(id string) ([]models.TeamDetail, erro
 	reqT.Header.Set("Authorization", "Bearer "+s.token)
 	reqT.Header.Set("Accept", "application/json")
 
-	respT, err := client.Do(reqT)
+	respT, err := s.doRequest(reqT)
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +139,11 @@ func (s *PandaScoreService) GetSeriesTeams(id string) ([]models.TeamDetail, erro
 func (s *PandaScoreService) GetSeriesMatches(id string) ([]models.Match, error) {
 	url := fmt.Sprintf("https://api.pandascore.co/series/%s/matches?sort=begin_at&per_page=100", id)
 	
-	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+s.token)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := s.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -311,12 +310,11 @@ func (s *PandaScoreService) GetTournamentBrackets(id string) (interface{}, error
 
 func (s *PandaScoreService) getJson(url string) (interface{}, int, error) {
 	fmt.Printf("getJson: Fetching %s\n", url)
-	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+s.token)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := s.doRequest(req)
 	if err != nil {
 		fmt.Printf("getJson error: %v\n", err)
 		return nil, 0, err
@@ -352,12 +350,11 @@ func (s *PandaScoreService) GetTeamsMatches(teamIDs []string) ([]models.Match, e
 	// Filter for running and not_started to show what's relevant now and next
 	url := fmt.Sprintf("https://api.pandascore.co/matches?filter[opponent_id]=%s&filter[status]=running,not_started&sort=begin_at&per_page=50", idsStr)
 	
-	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+s.token)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := s.doRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +495,6 @@ func (s *PandaScoreService) pollData() {
 
 func (s *PandaScoreService) fetchTournaments() {
 	newTournaments := []models.Tournament{}
-	client := &http.Client{}
 
 	// 1. Identify active leagues from running matches
 	activeLeagueIDs := make(map[int]bool)
@@ -507,7 +503,7 @@ func (s *PandaScoreService) fetchTournaments() {
 	reqM.Header.Set("Authorization", "Bearer "+s.token)
 	reqM.Header.Set("Accept", "application/json")
 	
-	respM, err := client.Do(reqM)
+	respM, err := s.doRequest(reqM)
 	if err == nil && respM.StatusCode == http.StatusOK {
 		var liveMatches []struct {
 			League struct {
@@ -530,7 +526,7 @@ func (s *PandaScoreService) fetchTournaments() {
 		req.Header.Set("Authorization", "Bearer "+s.token)
 		req.Header.Set("Accept", "application/json")
 
-		resp, err := client.Do(req)
+		resp, err := s.doRequest(req)
 		if err != nil {
 			fmt.Printf("Error fetching leagues page %d: %v\n", page, err)
 			break
@@ -597,8 +593,6 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 	games := []string{"league-of-legends", "csgo", "valorant"}
 	newMatches := []models.Match{}
 
-	client := &http.Client{}
-
 	for _, gameSlug := range games {
 		// 1. Fetch Live and Upcoming (Ascending)
 		urlUpcoming := fmt.Sprintf("https://api.pandascore.co/matches?filter[videogame]=%s&filter[status]=running,not_started&sort=begin_at&page=1&per_page=20", gameSlug)
@@ -611,7 +605,7 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 			req.Header.Set("Authorization", "Bearer "+s.token)
 			req.Header.Set("Accept", "application/json")
 
-			resp, err := client.Do(req)
+			resp, err := s.doRequest(req)
 			if err != nil {
 				fmt.Printf("Error fetching matches for %s: %v\n", gameSlug, err)
 				continue
@@ -768,3 +762,28 @@ func (s *PandaScoreService) fetchFromPandaScore() {
 
 	s.matches = newMatches
 }
+
+func (s *PandaScoreService) checkTokenStatus(resp *http.Response) {
+	if resp == nil {
+		return
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		log.Println("🚨 [PandaScore API] ERROR: Invalid or expired API token (401 Unauthorized)!")
+	} else if resp.StatusCode == http.StatusTooManyRequests {
+		log.Println("🚨 [PandaScore API] ERROR: API token limit exceeded (429 Too Many Requests)!")
+	} else if resp.StatusCode == http.StatusForbidden {
+		log.Println("🚨 [PandaScore API] ERROR: API token access forbidden (403 Forbidden)!")
+	} else if resp.StatusCode == http.StatusPaymentRequired {
+		log.Println("🚨 [PandaScore API] ERROR: API token has run out of credits (402 Payment Required)!")
+	}
+}
+
+func (s *PandaScoreService) doRequest(req *http.Request) (*http.Response, error) {
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err == nil {
+		s.checkTokenStatus(resp)
+	}
+	return resp, err
+}
+

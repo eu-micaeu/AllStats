@@ -14,6 +14,7 @@ import TournamentPage from './components/TournamentPage';
 import TournamentDetail from './components/TournamentDetail';
 import SeriesDetail from './components/SeriesDetail';
 import ProfilePage from './components/ProfilePage';
+import LandingPage from './components/LandingPage';
 import './styles/theme.css';
 
 function App() {
@@ -245,11 +246,12 @@ function App() {
   };
 
   const getCurrentPage = () => {
-    if (location.pathname === '/') return 'matches';
+    if (location.pathname === '/') return 'home';
+    if (location.pathname === '/matches') return 'matches';
     if (location.pathname === '/profile') return 'profile';
     if (location.pathname.startsWith('/tournaments')) return 'tournaments';
     if (location.pathname.startsWith('/series')) return 'tournaments';
-    return 'matches';
+    return 'home';
   };
 
   if (loading) return <div className="container">Loading dashboard...</div>;
@@ -257,11 +259,12 @@ function App() {
 
   return (
     <div className="app-wrapper">
-      <Header user={user} onAuthClick={() => setIsAuthOpen(true)} onLogout={handleLogout} currentPage={getCurrentPage() as any} onPageSelect={(page) => navigate(page === 'matches' ? '/' : page === 'profile' ? '/profile' : '/tournaments')} />
+      <Header user={user} onAuthClick={() => setIsAuthOpen(true)} onLogout={handleLogout} currentPage={getCurrentPage() as any} onPageSelect={(page) => navigate(page === 'home' ? '/' : page === 'matches' ? '/matches' : page === 'profile' ? '/profile' : '/tournaments')} />
       <div className="container">
         <main>
           <Routes>
-            <Route path="/" element={
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/matches" element={
               <>
                 <GameFilter selectedGame={selectedGame} onGameSelect={setSelectedGame} />
                 
@@ -316,7 +319,7 @@ function App() {
             <Route path="/tournaments" element={<TournamentPage user={user} onToggleFavorite={handleToggleFavorite} onTournamentClick={(id) => navigate(`/tournaments/${id}`)} />} />
             <Route path="/tournaments/:id" element={<TournamentDetailWrapper onSeriesClick={(id, name) => navigate(`/series/${id}?name=${encodeURIComponent(name)}`)} />} />
             <Route path="/series/:id" element={<SeriesDetailWrapper />} />
-            <Route path="/profile" element={user ? <ProfilePage user={user} onUpdateUser={handleUpdateUser} /> : <div className="container">Please sign in to view your profile.</div>} />
+            <Route path="/profile" element={user ? <ProfilePage user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} /> : <div className="container">Please sign in to view your profile.</div>} />
           </Routes>
         </main>
       </div>

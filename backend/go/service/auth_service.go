@@ -120,3 +120,77 @@ func (s *AuthService) RemoveFavoriteTournament(userID string, tournamentID strin
 	)
 	return err
 }
+
+func (s *AuthService) DeleteUser(id string) error {
+	objID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.collection.DeleteOne(context.Background(), bson.M{"_id": objID})
+	return err
+}
+
+func (s *AuthService) UpdateProfile(userID string, req models.UpdateProfileRequest) (*models.User, error) {
+	objID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch current user
+	var currentUser models.User
+	err = s.collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&currentUser)
+	if err != nil {
+		return nil, err
+	}
+
+	updateFields := bson.M{}
+
+	// If email changes, check uniqueness
+	if req.Email != "" && req.Email != currentUser.Email {
+		var existing models.User
+		err = s.collection.FindOne(context.Background(), bson.M{"email": req.Email}).Decode(&existing)
+		if err == nil {
+			return nil, errors.New("user with this email already exists")
+		}
+		updateFields["email"] = req.Email
+	}
+
+	if req.Username != "" {
+		updateFields["username"] = req.Username
+	}
+
+	if req.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		updateFields["password"] = string(hashedPassword)
+	}
+
+	if len(updateFields) > 0 {
+		_, err = s.collection.UpdateOne(
+			context.Background(),
+			bson.M{"_id": objID},
+			bson.M{"$set": updateFields},
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Retrieve the updated user
+	var updatedUser models.User
+	err = s.collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&updatedUser)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize favoriteTournaments if nil to avoid frontend issues
+	if updatedUser.FavoriteTournaments == nil {
+		updatedUser.FavoriteTournaments = []string{}
+	}
+
+	return &updatedUser, nil
+}
+

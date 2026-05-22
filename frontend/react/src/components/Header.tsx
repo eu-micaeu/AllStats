@@ -5,8 +5,8 @@ interface HeaderProps {
   user: User | null;
   onAuthClick: () => void;
   onLogout: () => void;
-  currentPage: 'matches' | 'tournaments' | 'profile';
-  onPageSelect: (page: 'matches' | 'tournaments' | 'profile') => void;
+  currentPage: 'home' | 'matches' | 'tournaments' | 'profile';
+  onPageSelect: (page: 'home' | 'matches' | 'tournaments' | 'profile') => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ user, onAuthClick, onLogout, currentPage, onPageSelect }) => {
@@ -14,12 +14,18 @@ const Header: React.FC<HeaderProps> = ({ user, onAuthClick, onLogout, currentPag
     <header className="main-header">
       <div className="header-container">
         <div className="header-left">
-          <div className="logo-section" onClick={() => onPageSelect('matches')} style={{ cursor: 'pointer' }}>
+          <div className="logo-section" onClick={() => onPageSelect('home')} style={{ cursor: 'pointer' }}>
             <img src="/iconallstats.png" alt="AllStats Logo" className="header-logo" />
             <span className="logo-text">ALL<span>STATS</span></span>
           </div>
           
           <nav className="main-nav">
+            <button 
+              className={`nav-link-btn ${currentPage === 'home' ? 'active' : ''}`}
+              onClick={() => onPageSelect('home')}
+            >
+              Home
+            </button>
             <button 
               className={`nav-link-btn ${currentPage === 'matches' ? 'active' : ''}`}
               onClick={() => onPageSelect('matches')}
