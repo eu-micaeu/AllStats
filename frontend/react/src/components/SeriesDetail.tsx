@@ -146,18 +146,15 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
       }
 
       let roundName = '';
-      if (name.includes('final') && isLower) roundName = 'LB Final';
-      else if (name.includes('final')) roundName = 'UB Final';
+      if (name.includes('quarterfinal') || name.includes('quarter-final')) {
+        roundName = isLower ? 'Lower Bracket Quarterfinals' : 'Upper Bracket Quarterfinals';
+      }
       else if (name.includes('semifinal') || name.includes('semi-final')) {
-        roundName = isLower ? 'LB Semifinals' : 'UB Semifinals';
+        roundName = isLower ? 'Lower Bracket Semifinal' : 'Upper Bracket Semifinals';
       }
-      else if (name.includes('quarterfinal') || name.includes('quarter-final')) {
-        roundName = isLower ? 'LB Quarterfinals' : 'UB Quarterfinals';
-      }
-      else if (name.includes('round 1')) roundName = isLower ? 'LB Round 1' : 'Round 1';
-      else if (name.includes('round 2')) roundName = isLower ? 'LB Round 2' : 'Round 2';
-      else if (name.includes('round 3')) roundName = isLower ? 'LB Round 3' : 'Round 3';
-      else if (name.includes('round 4')) roundName = isLower ? 'LB Round 4' : 'Round 4';
+      else if (name.includes('final') && isLower) roundName = 'Lower Bracket Final';
+      else if (name.includes('final')) roundName = 'Upper Bracket Final';
+      else if (name.includes('round 1')) roundName = isLower ? 'Lower Bracket Round 1' : 'Upper Bracket Round 1';
       else {
         roundName = m.name.split(':')[0] || 'Bracket';
       }
@@ -167,8 +164,18 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
       targetMap[roundName].push(m);
     });
 
-    const upperOrder = ['Round 1', 'Round 2', 'UB Quarterfinals', 'UB Semifinals', 'UB Final'];
-    const lowerOrder = ['LB Round 1', 'LB Round 2', 'LB Round 3', 'LB Round 4', 'LB Quarterfinals', 'LB Semifinals', 'LB Final'];
+    const upperOrder = [
+      'Upper Bracket Round 1',
+      'Upper Bracket Quarterfinals',
+      'Upper Bracket Semifinals',
+      'Upper Bracket Final'
+    ];
+    const lowerOrder = [
+      'Lower Bracket Round 1',
+      'Lower Bracket Quarterfinals',
+      'Lower Bracket Semifinal',
+      'Lower Bracket Final'
+    ];
 
     const sortedUpperRounds = Object.keys(upperRoundsMap).sort((a, b) => {
       const idxA = upperOrder.indexOf(a);
@@ -303,31 +310,12 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
 
     return (
       <div className="bracket-wrapper">
-        <div className="bracket-controls">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>Chaveamento Interativo</span>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
-              Passe o mouse sobre um time ou pesquise para destacar sua trajetória
-            </span>
-          </div>
-          <div className="bracket-search-container">
-            <Search size={16} style={{ color: 'var(--text-secondary)' }} />
-            <input
-              type="text"
-              placeholder="Pesquisar equipe..."
-              value={bracketSearchQuery}
-              onChange={(e) => setBracketSearchQuery(e.target.value)}
-              className="bracket-search-input"
-            />
-          </div>
-        </div>
-
         <div className="bracket-container">
           {/* Upper Bracket */}
           {sortedUpperRounds.length > 0 && (
             <div className="bracket-section">
               <div className="bracket-section-header">
-                <span className="bracket-section-title">Chave Superior</span>
+                <span className="bracket-section-title">Upper Bracket</span>
                 <span className="bracket-section-line"></span>
               </div>
               <div className="bracket-rounds-scroll">
@@ -357,7 +345,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
           {sortedLowerRounds.length > 0 && (
             <div className="bracket-section lower">
               <div className="bracket-section-header">
-                <span className="bracket-section-title">Chave Inferior</span>
+                <span className="bracket-section-title">Lower Bracket</span>
                 <span className="bracket-section-line"></span>
               </div>
               <div className="bracket-rounds-scroll">
