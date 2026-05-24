@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Swords, Layout } from 'lucide-react';
+import { ArrowLeft, Users, Swords, Layout, Search } from 'lucide-react';
 import { 
   fetchSeriesTeams, 
   fetchSeriesMatches, 
@@ -22,6 +22,8 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
   const [seriesInfo, setSeriesInfo] = useState<any>(null);
   const [tournamentData, setTournamentData] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [hoveredTeamId, setHoveredTeamId] = useState<number | null>(null);
+  const [bracketSearchQuery, setBracketSearchQuery] = useState<string>('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -192,6 +194,18 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
       return result ? result.score : 0;
     };
 
+    const renderTeamLogo = (t: any) => {
+      if (t?.image_url) {
+        return <img src={t.image_url} alt="" className="bracket-team-logo" />;
+      }
+      const firstLetter = t?.name ? t.name.charAt(0).toUpperCase() : '?';
+      return (
+        <div className="bracket-team-fallback">
+          {firstLetter}
+        </div>
+      );
+    };
+
     const renderMatch = (m: any) => {
       const teamA = m.opponents[0]?.opponent;
       const teamB = m.opponents[1]?.opponent;
@@ -200,109 +214,165 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ seriesId, seriesName, onBac
       const isFinished = m.status === 'finished';
       const winnerId = m.winner_id;
 
-      const getDisplayName = (t: any) => t?.acronym || (t?.name ? (t.name.length > 8 ? t.name.substring(0, 5) + '..' : t.name) : 'TBD');
+      const isTeamAHovered = teamA && hoveredTeamId === teamA.id;
+      const isTeamBHovered = teamB && hoveredTeamId === teamB.id;
+      const hasHoveredTeam = isTeamAHovered || isTeamBHovered;
+
+      const isSearchMatch = (t: any) => t && bracketSearchQuery && t.name?.toLowerCase().includes(bracketSearchQuery.toLowerCase());
+      const isTeamASearched = isSearchMatch(teamA);
+      const isTeamBSearched = isSearchMatch(teamB);
+      const hasSearchedTeam = isTeamASearched || isTeamBSearched;
+
+      const isWinnerA = isFinished && winnerId === teamA?.id;
+      const isWinnerB = isFinished && winnerId === teamB?.id;
+      const isLoserA = isFinished && teamB && winnerId === teamB?.id;
+      const isLoserB = isFinished && teamA && winnerId === teamA?.id;
+
       const isLive = m.status === 'live' || m.status === 'running';
 
+      let cardClasses = "bracket-match-card";
+      if (isLive) cardClasses += " is-live-match";
+      if (hoveredTeamId && hasHoveredTeam) cardClasses += " has-hovered-team";
+      if (bracketSearchQuery && hasSearchedTeam) cardClasses += " has-searched-team";
+
+      let teamAClasses = "bracket-match-team-row";
+      if (isWinnerA) teamAClasses += " is-winner";
+      if (isLoserA) teamAClasses += " is-loser";
+      if (isTeamAHovered) teamAClasses += " is-hovered";
+      if (isTeamASearched) teamAClasses += " is-searched";
+
+      let teamBClasses = "bracket-match-team-row";
+      if (isWinnerB) teamBClasses += " is-winner";
+      if (isLoserB) teamBClasses += " is-loser";
+      if (isTeamBHovered) teamBClasses += " is-hovered";
+      if (isTeamBSearched) teamBClasses += " is-searched";
+
+      const formattedDate = new Date(m.scheduled_at).toLocaleString([], {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
       return (
-        <div key={m.id} className="match-row" style={{ 
-          background: 'var(--card-bg)', 
-          border: isLive ? '1px solid var(--live-color)' : '1px solid rgba(255,255,255,0.05)', 
-          borderRadius: '4px',
-          overflow: 'visible',
-          boxShadow: isLive ? '0 0 10px rgba(34, 197, 94, 0.2)' : 'none',
-          position: 'relative',
-          minWidth: '140px'
-        }}>
+        <div key={m.id} className={cardClasses}>
           {isLive && (
-            <div style={{
-              position: 'absolute', top: '0', right: '0', background: 'var(--live-color)', color: 'white',
-              fontSize: '0.45rem', fontWeight: 900, padding: '0.1rem 0.3rem', borderBottomLeftRadius: '4px',
-              display: 'flex', alignItems: 'center', gap: '0.2rem', zIndex: 2
-            }}>
-              <div className="pulse" style={{ width: '4px', height: '4px', background: 'white' }} />
+            <div className="bracket-live-badge">
+              <div className="pulse-dot" />
               LIVE
             </div>
           )}
-          <div style={{ 
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.5rem',
-            background: winnerId === teamA?.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-            opacity: isFinished && winnerId !== teamA?.id ? 0.4 : 1, borderBottom: '1px solid rgba(255,255,255,0.02)'
-          }}>
-            <span style={{ fontWeight: 800, fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {getDisplayName(teamA)}
-            </span>
-            <span style={{ fontWeight: 900, fontSize: '0.75rem', color: winnerId === teamA?.id ? 'var(--accent-color)' : 'white' }}>{scoreA}</span>
+
+          {/* Team A Row */}
+          <div 
+            className={teamAClasses}
+            onMouseEnter={() => teamA && setHoveredTeamId(teamA.id)}
+            onMouseLeave={() => setHoveredTeamId(null)}
+          >
+            <div className="bracket-team-info">
+              {renderTeamLogo(teamA)}
+              <span className="bracket-team-name" title={teamA?.name || 'TBD'}>
+                {teamA?.acronym || teamA?.name || 'TBD'}
+              </span>
+            </div>
+            <span className="bracket-team-score">{scoreA}</span>
           </div>
-          <div style={{ 
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.5rem',
-            background: winnerId === teamB?.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-            opacity: isFinished && winnerId !== teamB?.id ? 0.4 : 1
-          }}>
-            <span style={{ fontWeight: 800, fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {getDisplayName(teamB)}
-            </span>
-            <span style={{ fontWeight: 900, fontSize: '0.75rem', color: winnerId === teamB?.id ? 'var(--accent-color)' : 'white' }}>{scoreB}</span>
+
+          {/* Team B Row */}
+          <div 
+            className={teamBClasses}
+            onMouseEnter={() => teamB && setHoveredTeamId(teamB.id)}
+            onMouseLeave={() => setHoveredTeamId(null)}
+          >
+            <div className="bracket-team-info">
+              {renderTeamLogo(teamB)}
+              <span className="bracket-team-name" title={teamB?.name || 'TBD'}>
+                {teamB?.acronym || teamB?.name || 'TBD'}
+              </span>
+            </div>
+            <span className="bracket-team-score">{scoreB}</span>
           </div>
-          <div style={{ 
-            fontSize: '0.5rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '0.2rem 0',
-            borderTop: '1px solid rgba(255,255,255,0.02)', background: 'rgba(0,0,0,0.1)', fontWeight: 600
-          }}>
-            {new Date(m.scheduled_at).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+
+          {/* Footer with date */}
+          <div className="bracket-match-details-footer">
+            {isFinished ? 'Encerrada' : isLive ? 'Em andamento' : formattedDate}
           </div>
-          
         </div>
       );
     };
 
     return (
-      <div className="bracket-container" style={{ display: 'flex', flexDirection: 'column', gap: '3rem', width: '100%' }}>
-        {/* Upper Bracket */}
-        {sortedUpperRounds.length > 0 && (
-          <div className="bracket-section">
-            <h4 style={{ color: 'var(--accent-color)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              Upper Bracket <span style={{ flex: 1, height: '1px', background: 'rgba(59, 130, 246, 0.2)' }}></span>
-            </h4>
-            <div style={{ display: 'flex', gap: '1.5rem', overflowX: 'auto', paddingBottom: '1rem' }}>
-              {sortedUpperRounds.map((roundName) => (
-                <div key={roundName} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 160px' }}>
-                  <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center' }}>{roundName}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', height: '100%' }}>
-                    {upperRoundsMap[roundName].map((m: any) => renderMatch(m))}
-                  </div>
-                </div>
-              ))}
-              
-              {/* Grand Final in same flow if exists and is logical */}
-              {grandFinalMatches.length > 0 && (
-                <div key="grand-final" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 160px' }}>
-                  <div style={{ fontSize: '0.55rem', color: 'var(--accent-color)', fontWeight: 900, textTransform: 'uppercase', textAlign: 'center' }}>Grand Final</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', height: '100%' }}>
-                    {grandFinalMatches.map((m: any) => renderMatch(m))}
-                  </div>
-                </div>
-              )}
-            </div>
+      <div className="bracket-wrapper">
+        <div className="bracket-controls">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>Chaveamento Interativo</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+              Passe o mouse sobre um time ou pesquise para destacar sua trajetória
+            </span>
           </div>
-        )}
+          <div className="bracket-search-container">
+            <Search size={16} style={{ color: 'var(--text-secondary)' }} />
+            <input
+              type="text"
+              placeholder="Pesquisar equipe..."
+              value={bracketSearchQuery}
+              onChange={(e) => setBracketSearchQuery(e.target.value)}
+              className="bracket-search-input"
+            />
+          </div>
+        </div>
 
-        {/* Lower Bracket */}
-        {sortedLowerRounds.length > 0 && (
-          <div className="bracket-section">
-            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              Lower Bracket <span style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.05)' }}></span>
-            </h4>
-            <div style={{ display: 'flex', gap: '1.5rem', overflowX: 'auto', paddingBottom: '1rem' }}>
-              {sortedLowerRounds.map((roundName) => (
-                <div key={roundName} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: '0 0 160px' }}>
-                  <div style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center' }}>{roundName}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', height: '100%' }}>
-                    {lowerRoundsMap[roundName].map((m: any) => renderMatch(m))}
+        <div className="bracket-container">
+          {/* Upper Bracket */}
+          {sortedUpperRounds.length > 0 && (
+            <div className="bracket-section">
+              <div className="bracket-section-header">
+                <span className="bracket-section-title">Chave Superior</span>
+                <span className="bracket-section-line"></span>
+              </div>
+              <div className="bracket-rounds-scroll">
+                {sortedUpperRounds.map((roundName) => (
+                  <div key={roundName} className="bracket-round-column">
+                    <div className="bracket-round-header">{roundName}</div>
+                    <div className="bracket-round-matches">
+                      {upperRoundsMap[roundName].map((m: any) => renderMatch(m))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+                
+                {/* Grand Final in same flow if exists */}
+                {grandFinalMatches.length > 0 && (
+                  <div key="grand-final" className="bracket-round-column">
+                    <div className="bracket-round-header" style={{ color: 'var(--accent-color)', fontWeight: 900 }}>Grande Final</div>
+                    <div className="bracket-round-matches">
+                      {grandFinalMatches.map((m: any) => renderMatch(m))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Lower Bracket */}
+          {sortedLowerRounds.length > 0 && (
+            <div className="bracket-section lower">
+              <div className="bracket-section-header">
+                <span className="bracket-section-title">Chave Inferior</span>
+                <span className="bracket-section-line"></span>
+              </div>
+              <div className="bracket-rounds-scroll">
+                {sortedLowerRounds.map((roundName) => (
+                  <div key={roundName} className="bracket-round-column">
+                    <div className="bracket-round-header">{roundName}</div>
+                    <div className="bracket-round-matches">
+                      {lowerRoundsMap[roundName].map((m: any) => renderMatch(m))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };

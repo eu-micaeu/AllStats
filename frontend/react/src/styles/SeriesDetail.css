@@ -127,3 +127,386 @@
   flex-direction: column;
   gap: 1rem;
 }
+
+/* ==========================================================================
+   BRACKET / CHAVEMENTO STYLES
+   ========================================================================== */
+
+.bracket-wrapper {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bracket-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.01);
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.bracket-search-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  width: 100%;
+  max-width: 320px;
+  transition: all 0.3s ease;
+}
+
+.bracket-search-container:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.bracket-search-input {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 0.85rem;
+  outline: none;
+  width: 100%;
+}
+
+.bracket-search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.bracket-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  width: 100%;
+  padding: 1rem 0;
+}
+
+.bracket-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bracket-section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.bracket-section-title {
+  color: var(--accent-color);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bracket-section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.3) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.bracket-section.lower .bracket-section-title {
+  color: var(--text-secondary);
+}
+
+.bracket-section.lower .bracket-section-line {
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.bracket-rounds-scroll {
+  display: flex;
+  gap: 2.5rem;
+  overflow-x: auto;
+  padding: 1.5rem 0.5rem;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.bracket-rounds-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.bracket-rounds-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.bracket-round-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 0 0 240px;
+  min-width: 240px;
+}
+
+.bracket-round-header {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-weight: 800;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.bracket-round-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  justify-content: space-around;
+  height: 100%;
+  position: relative;
+  padding: 1rem 0;
+}
+
+/* Glassmorphism Match Card */
+.bracket-match-card {
+  background: rgba(26, 31, 38, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: visible;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.bracket-match-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 255, 255, 0.05);
+}
+
+/* Highlight matching paths */
+.bracket-match-card.has-hovered-team {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.bracket-match-card.has-searched-team {
+  border-color: rgba(234, 179, 8, 0.6);
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.25);
+  background: rgba(45, 37, 20, 0.7);
+}
+
+/* Live indicators */
+.bracket-match-card.is-live-match {
+  border-color: var(--live-color);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.25);
+}
+
+.bracket-live-badge {
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  background: var(--live-color);
+  color: white;
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 0.15rem 0.45rem;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+  letter-spacing: 0.05em;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.pulse-dot {
+  width: 5px;
+  height: 5px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse-opacity 1.5s infinite;
+}
+
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Team Rows */
+.bracket-match-team-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.bracket-match-team-row:last-of-type {
+  border-bottom: none;
+}
+
+.bracket-team-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.bracket-team-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+
+.bracket-team-fallback {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+
+.bracket-team-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bracket-team-score {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--text-secondary);
+  padding-left: 0.5rem;
+}
+
+/* Highlight state inside team rows */
+.bracket-match-team-row.is-hovered {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.bracket-match-team-row.is-searched {
+  background: rgba(234, 179, 8, 0.12);
+}
+
+.bracket-match-team-row.is-winner {
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.bracket-match-team-row.is-winner .bracket-team-name {
+  color: white;
+  font-weight: 800;
+}
+
+.bracket-match-team-row.is-winner .bracket-team-score {
+  color: var(--accent-color);
+  font-weight: 900;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.bracket-match-team-row.is-loser {
+  opacity: 0.45;
+  filter: grayscale(0.2);
+}
+
+/* Match card footer */
+.bracket-match-details-footer {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.15);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Connectors using simple beautiful lines */
+.bracket-round-column:not(:last-child) .bracket-match-card::after {
+  content: '';
+  position: absolute;
+  right: -21px;
+  top: 50%;
+  width: 21px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.bracket-round-column:not(:last-child) .bracket-match-card.has-hovered-team::after {
+  background: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-color);
+  z-index: 1;
+}
+
+.bracket-round-column:not(:last-child) .bracket-match-card.has-searched-team::after {
+  background: var(--cs2-color);
+  box-shadow: 0 0 8px var(--cs2-color);
+  z-index: 1;
+}
+
+/* In addition, left conector lines to receive the connection */
+.bracket-round-column:not(:first-child) .bracket-match-card::before {
+  content: '';
+  position: absolute;
+  left: -21px;
+  top: 50%;
+  width: 21px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.bracket-round-column:not(:first-child) .bracket-match-card.has-hovered-team::before {
+  background: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-color);
+  z-index: 1;
+}
+
+.bracket-round-column:not(:first-child) .bracket-match-card.has-searched-team::before {
+  background: var(--cs2-color);
+  box-shadow: 0 0 8px var(--cs2-color);
+  z-index: 1;
+}
+
